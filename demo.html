@@ -135,12 +135,12 @@
 
       logoutButton.addEventListener("click", (event) => {
         localStorage.removeItem("current_user");
-        window.location.assign("LoginPage.html");
+        window.location.assign("index.html");
       });
 
       document.addEventListener("DOMContentLoaded", (event) => {
         if (!currentUser) {
-          window.location.assign("LoginPage.html");
+          window.location.assign("index.html");
           return;
         }
       });
