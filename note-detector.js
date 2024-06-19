@@ -297,20 +297,32 @@
   */
  function NoteDetector(dataSize, sampleRate, windowType)
  {
-     this.conf =
-     {
-         close_threshold     : 0.03,  // 3%
+    this.conf =
+    /*{
+        close_threshold     : 0.01,  // 1% difference to consider estimates close
 
-         track_lone_ms       : 50,   // X ms of sustained lone estimate
-         track_cons_ms       : 50,    // X ms of sustained consensus estimate
+        track_lone_ms       : 200,   // 100 ms of sustained lone estimate
+        track_cons_ms       : 200,   // 100 ms of sustained consensus estimate
 
-         detrack_min_volume  : 0.01,
-         detrack_est_none_ms : 100,   // X ms of no estimates
-         detrack_est_some_ms : 50,   // X ms of some estimates with no consensus
+        detrack_min_volume  : 0.05,  // require higher minimum volume
+        detrack_est_none_ms : 200,    // 50 ms of no estimates
+        detrack_est_some_ms : 50,    // 50 ms of some estimates with no consensus
 
-         stable_note_ms      : 50,
-     }
-     /*{
+        stable_note_ms      : 50,   // require longer stable note period
+    };*/
+    {
+        close_threshold     : 0.03,  // 3%
+
+        track_lone_ms       : 50,   // X ms of sustained lone estimate
+        track_cons_ms       : 50,    // X ms of sustained consensus estimate
+
+        detrack_min_volume  : 0.01,
+        detrack_est_none_ms : 100,   // X ms of no estimates
+        detrack_est_some_ms : 50,   // X ms of some estimates with no consensus
+
+        stable_note_ms      : 50,
+    }
+    /* {
          close_threshold     : 0.05,  // 5%
 
          track_lone_ms       : 100,   // X ms of sustained lone estimate
@@ -321,7 +333,7 @@
          detrack_est_some_ms : 250,   // X ms of some estimates with no consensus
 
          stable_note_ms      : 50,
-     }*/;
+     };*/
 
 
      //
@@ -520,4 +532,18 @@
          this.detectors[1].threshold   /= 2;  // yin
          this.detectors[2].peak_ignore *= 2;  // mpm
      }
+         
+    this.getAccuracy = function () {
+        let totalNotes = this.correctNotes + this.wrongNotes;
+        return totalNotes === 0 ? 0 : this.correctNotes / totalNotes * 100;
+    }
+
+    this.getCorrectNotes = function () {
+        return this.correctNotes;
+    }
+
+    this.getWrongNotes = function () {
+        return this.wrongNotes;
+    }
+
  }

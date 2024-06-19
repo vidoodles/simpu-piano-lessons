@@ -7,15 +7,15 @@ body {
   padding: 0;
 }
 
-#showscore {
+#showStatsBtn {
   background: #15a7ffb3;
   width: 120px;
   height: 40px;
   margin: 32px auto 0;
   top: 420px;
-  right: 1510px;
+  right: 1233px;
   left: 60px;
-  position: absolute;
+  position: relative;
   text-align: center;
   line-height: 40px;
   border-radius: 2px;
@@ -25,14 +25,46 @@ body {
 
 #go {
   background: #15a7ffb3;
-  width: 120px;
-  height: 40px;
+  width: 96px;
+  height: 32px;
   margin: 32px auto 0;
   text-align: center;
-  line-height: 40px;
+  line-height: 32px;
   border-radius: 2px;
   box-shadow: 0 2px 5px #0007;
   cursor: pointer;
+}
+
+.popup {
+  display: none;
+  position: fixed;
+  z-index: auto;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.popup-content {
+  background-color: #000000;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 60%;
+  text-align: center;
+}
+
+.popup-content ul {
+  list-style-type: none; /* Remove default bullet points */
+  padding: 0; /* Optional: Remove default padding */
+  margin: 0; /* Optional: Remove default margin */
+}
+
+
+#closePopupBtn {
+  margin-top: 10px;
 }
 
 .button-container {
@@ -109,12 +141,12 @@ body {
 }
 
 #graph {
-  margin: 16px auto;
+  margin: 8px auto;
 }
 
 #graph span {
   display: block;
-  width: 830px;
+  width: 440px;
   height: 14px;
   margin: -14px auto 0;
   font-size: 11px;
@@ -135,7 +167,7 @@ body {
 #result {
   background: #123;
   text-align: center;
-  width: 800px;
+  width: 400px;
   margin: 10px auto 20px;
   padding: 10px 20px;
   height: 24px;
@@ -146,8 +178,8 @@ body {
 #trace {
   background: #0004;
   color: #fffa;
-  width: 800px;
-  height: 200px;
+  width: 360px;
+  height: 160px;
   margin: 0 auto 32px;
   padding: 10px 20px;
   font-family: monospace;
@@ -160,8 +192,8 @@ body {
 #tabs {
   background: #fff;
   color: #000;
-  width: 800px;
-  height: 200px;
+  width: 360px;
+  height: 160px;
   margin: 0 auto 32px;
   padding: 10px 20px;
   font-family: monospace;
@@ -193,11 +225,11 @@ h2 {
   border: 1px solid #333;
   margin: 0;
   padding: 0;
-  width: 20px; /* Reduced width */
-  height: 120px; /* Reduced height */
+  width: 14px; /* Reduced width */
+  height: 55px; /* Reduced height */
   background: #fff;
   border-radius: 0 0 3px 3px;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 2px rgba(0, 0, 0, 0.1);
 }
 
 .kb--88 button[aria-label^="C#"],
@@ -206,9 +238,9 @@ h2 {
 .kb--88 button[aria-label^="G#"],
 .kb--88 button[aria-label^="A#"] {
   background: #333;
-  height: 80px; /* Reduced height */
-  width: 16px; /* Reduced width */
-  margin: 0 -8px; /* Adjusted margin */
+  height: 26px; /* Reduced height */
+  width: 10px; /* Reduced width */
+  margin: 0 -5px; /* Adjusted margin */
   z-index: 1;
   position: relative;
 }

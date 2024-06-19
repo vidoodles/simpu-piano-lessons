@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>NoteDetector 0.1</title>
+    <title>PianoNoteDetectionv0.2</title>
     <link rel="stylesheet" href="styles.css" />
     <link
       rel="stylesheet"
@@ -10,28 +10,17 @@
   </head>
 
   <body>
-    <!--<div id="showscore" onclick="showPopup()">Show Scores</div>-->
-        <!-- Popup container (initially hidden) -->
-    <div id="popup" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #123; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 1000;">
-          <!-- Content of the popup goes here -->
-          <h2>Scores Popup</h2>
-          <p>Popup content goes here...</p>
-          <!-- Close button -->
-          <button onclick="hidePopup()">Close</button>
+    <button id="showStatsBtn">Show Scores</button>
+    <div id="popup" class="popup">
+      <div class="popup-content">
+        <span id="songNamePopup"></span>
+        <ul id="attemptList"></ul>
+        <button id="closePopupBtn">Close</button>
+      </div>
     </div>
-  
-      <script>
-          function showPopup() {
-              document.getElementById('popup').style.display = 'block';
-          }
-  
-          function hidePopup() {
-              document.getElementById('popup').style.display = 'none';
-          }
-      </script>
     <div class="PenguinSimpu">
-    <!--<img src="images/PianoPage.png"style="right: 100px; position: absolute; top: 30px; left: 60px; height: 320px;"></div>-->
-    <div id="go">Play</div>
+    <img src="images/PianoPage.png"style="right: 100px; position: absolute; top: 30px; left: 60px; height: 320px;"></div> 
+    <div id="go">Go</div>
     <div
       style="
         position: absolute;
@@ -51,7 +40,7 @@
     <div class="button-container">
       <label>
         <br />
-        <select id="songSelect" >
+        <select id="songSelect">
           <option selected disabled value="">Pick a Song</option>
           <optgroup label="Easy">
             <option
@@ -60,21 +49,24 @@
             >
               Twinkle Twinkle Little Star
             </option>
-            <option value="[4/4; E4 E4 F4 G4][G4 F4 E4 D4][C4 C4 D4 E4][E4 D4 D4]N[E4 E4 F4 G4][G4 F4 E4 D4][C4 C4 D4 E4][D4 C4 C4]N[D4 D4 E4 C4][D4 F4 E4 C4][D4 F4 E4 D4][C4 D4 G4]N[E4 E4 F4 G4][G4 F4 E4 D4][C4 C4 D4 E4][D4 C4 C4]">Ode to Joy</option>
+            <option value="[4/4; C4 C4]">Ode to Joy</option>  
             <option value="[4/4; E4 D4 C4 D4][E4 E4 E4][D4 D4 D4][E4 G4 G4]N[E4 D4 C4 D4][E4 E4 E4 E4][D4 D4 E4 D4][C4]">Mary had a little lamb</option>
             <option value="[4/4; G4 A4 G4 F4][E4 F4 G4][D4 E4 F4][E4 F4 G4]N[G4 A4 G4 F4][E4 F4 G4][D4 G4][E4 C4]">London Bridge</option>
           </optgroup>
           <optgroup label="Medium">
-            <option value="[4/4; G4 C5 D5][B4 G4 A4 B4]">Bahay Kubo</option>
             <option
               value="[4/4; B4 C#5 D5 C#5 B4 A4 F#4 -][E4 F#4 B4 F#4 G#4 A4 -][G#4 F#4 G#4 E4 F#4 C#3 F#3 B3 A#3]N[4/4; B4 C#5 D5 C#5 B4 A4 E5 F#5 A#5]"
             >
               Hanachirusato
             </option>
           </optgroup>
-          <optgroup label="Hard"></optgroup>
+          <optgroup label="Hard">
+            <option value="[4/4; G4 C5 D5][B4 G4 A4 B4]">Bahay Kubo</option>
+          </optgroup>
         </select>
       </label>
+
+      </div>
     </div>
     <div id="show-options"><a href="#">Options</a></div>
 
@@ -97,10 +89,10 @@
 
     <div id="graph">
       <span></span>
-      <canvas width="800" height="128"></canvas>
+      <canvas width="440" height="128"></canvas>
     </div>
 
-    <div id="result">Pick a Song and Press Play!</div>
+    <div id="result">Click Go and play a note</div>
 
     <!--	<div id=trace></div>-->
     <div id="tabs"></div>
@@ -124,57 +116,119 @@
       const songSelect = document.getElementById("songSelect");
       const logoutButton = document.querySelector("#logout-btn");
       const currentUser = localStorage.getItem("current_user");
+      const popup = document.getElementById("popup");
+      const attemptList = document.getElementById("attemptList");
+      const songNamePopup = document.getElementById("songNamePopup");
+      const progressContainer = document.querySelector("#progressContainer");
+      const resultElement = document.getElementById("result");
 
       let noteQueue = [];
       let currentPosition = 0;
       let progressPercentage = 0;
+      let accuracy = 0;
+      let correctNotes = 0;
+      let wrongNotes = 0;
 
-      function getProgress(currentNote, totalNotes) {
-        return (100 * currentNote) / totalNotes;
+      function saveProgressPercentage(progress) {
+        const songName = songSelect.selectedOptions[0].textContent.trim();
+        const userData = JSON.parse(localStorage.getItem("user_data")) || {};
+        const userSongData = userData[currentUser.username] = userData[currentUser.username] || {};
+        const songProgress = userSongData[songName] = userSongData[songName] || {};
+        songProgress.progress = progress;
+        localStorage.setItem("user_data", JSON.stringify(userData));
       }
+      function saveSongData() {
+        const songName = songSelect.selectedOptions[0].textContent.trim();
+        const userData = JSON.parse(localStorage.getItem("user_data")) || {};
+        const userSongData = userData[currentUser.username] = userData[currentUser.username] || {};
+        const songProgress = userSongData[songName] = userSongData[songName] || {};
+        const attemptsData = songProgress.attempts = songProgress.attempts || [];
+        
+        attemptsData.push({ attemptNumber: attemptsData.length + 1, progress: progressPercentage });
+        localStorage.setItem("user_data", JSON.stringify(userData));
+      }
+
+      function getSongData(songName) {
+        const userData = JSON.parse(localStorage.getItem("user_data")) || {};
+        return (userData[currentUser.username] && userData[currentUser.username][songName]) || {};
+      }
+
+
+      function showSongStats() {
+        const songName = document.getElementById("songSelect").selectedOptions[0].textContent.trim();
+        const songData = getSongData(songName);
+
+        if (!songData.attempts || songData.attempts.length === 0) {
+          alert("You have not played this song yet.");
+          return;
+        }
+
+        songNamePopup.textContent = songName;
+          attemptList.innerHTML = songData.attempts.map(attempt => 
+            `<li>Attempt ${attempt.attemptNumber}: ${attempt.progress.toFixed(2)}%</li>`
+          ).join('');
+          popup.style.display = "block";
+        }
+
+      document.getElementById("showStatsBtn").addEventListener("click", showSongStats);
+      document.getElementById("closePopupBtn").addEventListener("click", () => {
+      document.getElementById("popup").style.display = "none";
+      });
 
       logoutButton.addEventListener("click", (event) => {
         localStorage.removeItem("current_user");
         window.location.assign("index.html");
       });
 
-      document.addEventListener("DOMContentLoaded", (event) => {
+      songSelect.addEventListener("change", loadSong);
+      logoutButton.addEventListener("click", logoutUser);
+      document.getElementById("showStatsBtn").addEventListener("click", showSongStats);
+      document.getElementById("closePopupBtn").addEventListener("click", () => popup.style.display = "none");
+
+      window.onload = () => {
         if (!currentUser) {
-          window.location.assign("index.html");
-          return;
+          window.location.href = "index.html";
         }
-      });
+      };
 
       function renderTabs() {
-        document.getElementById("tabs").innerHTML = "";
-        const renderer = new Vex.Flow.Renderer(
-          $("#tabs")[0],
-          Vex.Flow.Renderer.Backends.SVG
-        );
+        const tabsElement = document.getElementById("tabs");
+        tabsElement.innerHTML = "";
+        const renderer = new Vex.Flow.Renderer(tabsElement, Vex.Flow.Renderer.Backends.SVG);
         const artist = new Artist(10, 30, 800, { scale: 0.7 });
-        new VexTab(artist).parse(
-          simpleNotation2VexTab(songSelect.value, currentPosition)
-        );
+        new VexTab(artist).parse(simpleNotation2VexTab(songSelect.value, currentPosition));
         artist.render(renderer);
-        const progressPercentageElement = document.querySelector(
-          "#progressPercentage"
-        );
+        const progressPercentageElement = document.querySelector("#progressPercentage");
         progressPercentage = getProgress(currentPosition, noteQueue.length);
-        progressPercentageElement.textContent = `%${Number(
-          progressPercentage || 0
-        ).toFixed(0)}`;
+        progressPercentageElement.textContent = `%${Number(progressPercentage || 0).toFixed(0)}`;
+      }
+
+      function getProgress(currentNote, totalNotes) {
+        return (100 * currentNote) / totalNotes;
       }
 
       function loadSong() {
-        currentPosition = 0;
-        renderTabs();
-        noteQueue = extractNotes(songSelect.value);
-        // console.log("Remaining Notes", noteQueue);
-      }
+      currentPosition = 0;
+      accuracy = 0;
+      correctNotes = 0;
+      wrongNotes = 0;
+      renderTabs();
+      noteQueue = extractNotes(songSelect.value);
+
+      // Load song attempt data
+      const songName = document.getElementById("songSelect").selectedOptions[0].textContent.trim();
+      const songData = getSongData(songName);
+      const attemptNumber = songData.attempts || 1;
+
+      // Update UI or perform any necessary actions based on attempt number
+      console.log(`Loading attempt ${attemptNumber} for ${songName}`);
+
+      // Now proceed with the rest of your song loading logic
+    }
 
       songSelect.onchange = loadSong;
       if (songSelect.value) loadSong();
-    </script>
+    </script> 
     <script type="text/javascript">
       "use strict";
 
@@ -233,13 +287,12 @@
       }
       let lastNote = "";
       let lastVol = 0;
-
-      //
+      
       function update() {
+        if (!analyzer) return; // Ensure analyzer is initialized
+
         var input_8 = analyzer.v_uint8;
         var input_f = analyzer.v_float;
-        var note;
-        var desc;
 
         analyzer.getByteTimeDomainData(input_8);
 
@@ -250,34 +303,46 @@
 
         plot(detector.buf, "#08f", true, -1, +1);
 
-        note = detector.getNote();
-        desc = note && note.stable ? hzToNoteString(note.freq) : "";
+        var note = detector.getNote();
+        var desc = note && note.stable ? hzToNoteString(note.freq) : "";
         $("#result").html(desc);
+        
         const currentNote = desc.replace(".", "");
         $(`button[aria-label!='']`).css("background", "");
+
         if (currentPosition < noteQueue.length) {
-          $(`button[aria-label='${noteQueue[currentPosition]}']`).css(
-            "background",
-            "#3f0"
-          );
+        const expectedNote = noteQueue[currentPosition];
+        $(`button[aria-label='${expectedNote}']`).css("background", "#3f0");
+
           if (
             lastNote !== currentNote ||
             ((detector.vol - lastVol) / lastVol) * 100 > 50
           ) {
             lastNote = currentNote;
+            lastVol = detector.vol;
+
             if (noteQueue[currentPosition] === currentNote) {
               currentPosition += 1;
               renderTabs();
             }
           }
-        } else {
-          $("#result").html("Finished");
+
+          // Check if we have reached the end of noteQueue
+          if (currentPosition >= noteQueue.length) {
+            // Song is finished
+            $("#result").html("Finished");
+            stop(); // Optionally stop further updates or perform any cleanup
+            return;
+          }
         }
+
+        // Integrate the following block from the second snippet
         if (currentNote) {
           $(`button[aria-label='${currentNote}']`).css("background", "#08f");
         }
-        lastVol = detector.vol;
+        requestAnimationFrame(update);
       }
+
 
       //
       function updateConfig() {
@@ -286,7 +351,8 @@
         conf.windowSize = sizeMap[$("#win-size .active").attr("id")];
         conf.windowType = $("#win-type .active").attr("id");
       }
-
+      
+      //
       function updateGraphTitle() {
         var $info = $("#graph span");
         var title =
@@ -298,27 +364,22 @@
 
       //
       function initAnalyzer() {
+        if (analyzer) return;
         analyzer = context.createAnalyser();
         analyzer.fftSize = conf.windowSize;
         analyzer.v_uint8 = new Uint8Array(conf.windowSize);
         analyzer.v_float = new Float32Array(conf.windowSize);
-
         source.connect(analyzer);
-        //			analyzer.connect(context.destination);
-
-        detector = new NoteDetector(
-          conf.windowSize,
-          context.sampleRate,
-          conf.windowType
-        );
+        detector = new NoteDetector(conf.windowSize, context.sampleRate, conf.windowType);
         detector.trace = log;
       }
 
       //
+      const throttledUpdate = _.throttle(update, 100); // update at most every 100ms
+
       function onUpdate() {
         if (enough) return;
-
-        update();
+        throttledUpdate();
         window.requestAnimationFrame(onUpdate);
       }
 
@@ -332,7 +393,12 @@
 
         source = context.createMediaStreamSource(stream);
 
+        try {
         initAnalyzer();
+      } catch (error) {
+        onError(error); // Handle initialization error
+        return;
+      }
 
         enough = false;
         onUpdate();
@@ -345,27 +411,25 @@
       }
 
       //
-      function start() {
-        log("");
-
-        log("Creating AudioContext...");
-
-        try {
-          window.AudioContext =
-            window.AudioContext || window.webkitAudioContext;
-          context = new AudioContext();
-        } catch (e) {
-          log("Web Audio API not supported.");
-          return;
-        }
-
-        //
-        log("Requesting local audio stream...");
-
-        const opts = { audio: true, video: false };
-
-        navigator.mediaDevices.getUserMedia(opts).then(onOpened).catch(onError);
+      async function start() {
+      log("");
+      log("Creating AudioContext...");
+      try {
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        context = new AudioContext();
+      } catch (e) {
+        log("Web Audio API not supported.");
+        return;
       }
+      log("Requesting local audio stream...");
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        onOpened(stream);
+      } catch (error) {
+        onError(error);
+      }
+    }
+
 
       function stop() {
         log("Shutting down...");
@@ -382,6 +446,13 @@
         }
 
         if (context) context = null;
+
+        saveSongData(); // Save song data including progression
+
+        // Reset for a new attempt
+        const songName = document.getElementById("songSelect").selectedOptions[0].textContent.trim();
+        currentPosition = 0; // Reset position
+        renderTabs(); // Render tabs to reset UI
 
         $("#go").html("Go").removeClass("active");
 
@@ -1052,5 +1123,8 @@
         type="button"
       ></button>
     </div>
+    <br>
+    <br>
+    <br>
   </body>
 </html>
