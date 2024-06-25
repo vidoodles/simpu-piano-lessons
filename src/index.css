@@ -1,0 +1,191 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .page-enter {
+    opacity: 0;
+  }
+  
+  .page-enter-active {
+    opacity: 1;
+    transition: opacity 300ms ease-in-out;
+  }
+  
+  .page-exit {
+    opacity: 1;
+  }
+  
+  .page-exit-active {
+    opacity: 0;
+    transition: opacity 300ms ease-in-out;
+  }
+  
+  .font-birdgo {
+    font-family: 'Birdgo', sans-serif;
+  }
+  
+/* Custom styles for the piano */
+.piano {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.piano-key {
+  display: inline-block;
+  width: 40px;
+  height: 200px;
+  line-height: 200px;
+  text-align: center;
+  border: 1px solid #000;
+  cursor: pointer;
+  user-select: none;
+}
+
+.piano-key-pressed {
+  background-color: #3182ce; /* Blue color when pressed */
+  color: #fff;
+}
+
+.piano-key-white {
+  background-color: #fff;
+}
+
+.piano-key-black {
+  background-color: #000;
+  color: #fff;
+}
+
+.button-19 {
+  appearance: button;
+  background-color: #4f5056;
+  border: solid transparent;
+  border-radius: 20px;
+  border-width: 0 0 4px;
+  box-sizing: border-box;
+  color: #f0b38a;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  line-height: 20px;
+  margin: 0;
+  outline: none;
+  overflow: visible;
+  padding: 13px 16px;
+  text-align: center;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  transform: translateZ(0);
+  transition: filter .2s;
+  user-select: none;
+  -webkit-user-select: none;
+  vertical-align: middle;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.button-19:after {
+  background-clip: padding-box;
+  background-color: #606166;
+  border: solid transparent;
+  border-radius: 16px;
+  border-width: 0 0 4px;
+  bottom: -4px;
+  content: "";
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: -1;
+}
+
+.button-19:main,
+.button-19:focus {
+  user-select: auto;
+}
+
+.button-19:hover:not(:disabled) {
+  background-color: #c7570a;
+  filter: brightness(1.1);
+  -webkit-filter: brightness(1.1);
+}
+
+.button-19:disabled {
+  cursor: auto;
+}
+
+.button-19:active {
+  border-width: 4px 0 0;
+  background: none;
+}
+
+:root {
+  --color-blue: #c7570a;
+  --color-green: #606166;
+  --color-brown: #ffffff;
+  --color-beige: #606166;
+  --color-yellow: #606166;
+  --color-pink: #fe4365;
+}
+
+.floating-text {
+  transform: translateY(0px);
+  animation: float 5s ease-in-out infinite;
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 3px;
+  font-size: 15px;
+  color: var(--color-blue);
+  padding: 50px;
+  border-radius: 11px;
+  position: relative;
+  display: inline-block; /* Ensure it behaves like an inline block */
+  max-width: 70%; /* Adjust max-width as needed */
+}
+
+.floating-text p::after {
+  content: "";
+  position: absolute;
+  bottom: -20px; /* Adjust distance from bottom */
+  left: 50%; /* Position at the middle horizontally */
+  transform: translateX(-50%); /* Center the triangle horizontally */
+  border-width: 10px;
+  border-style: solid;
+  border-color: var(--color-beige) transparent transparent transparent;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+  
+}
+
+@font-face {
+  font-family: 'Birdgo';
+  src: url('./fonts/Birdgo.ttf') format('truetype');
+  font-weight: 400;
+}
+
+
+
+body {
+  @apply font-birdgo;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}

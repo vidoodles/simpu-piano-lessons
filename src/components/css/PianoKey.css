@@ -1,0 +1,28 @@
+.piano-keyboard {
+    display: flex;
+  }
+  
+  .piano-key {
+    flex: 1;
+    border: 1px solid #000;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+  }
+  
+  .white {
+    background-color: #fff;
+    color: #000;
+  }
+  
+  .black {
+    background-color: #000;
+    color: #fff;
+  }
+  
+  .pressed {
+    background-color: blue !important;
+    color: #fff !important;
+  }
+  
