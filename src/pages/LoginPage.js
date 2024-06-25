@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import firebase from '../utils/FirebaseConfig';
-import { saveUser } from '../utils/userSlice';
 import { useDispatch } from 'react-redux';
 import logger from '../utils/logger';
 

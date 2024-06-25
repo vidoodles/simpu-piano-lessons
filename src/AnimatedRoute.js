@@ -8,7 +8,7 @@ const AnimatedRoute = ({ component: Component, ...rest }) => (
     {({ location }) => (
       <CSSTransition
         key={location.key}
-        classNames="page"
+        classNames="fade"
         timeout={300}
       >
         <Component />
