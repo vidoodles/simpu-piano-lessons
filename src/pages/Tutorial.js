@@ -1,189 +1,108 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
+import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import FloatingSpeechBubble from "../components/FloatingSpeechBubble";
+import * as Pitchfinder from 'pitchfinder'; // Use pitchfinder for pitch detection
 
-const OnePi = 1 * Math.PI;
-const TwoPi = 2 * Math.PI;
-const FourPi = 4 * Math.PI;
-
-const tapers = {
-  'raw': null,
-  'hann': function (x) { return 1 / 2 - 1 / 2 * Math.cos(TwoPi * x); },
-  'hamming': function (x) { return 25 / 46 - 21 / 46 * Math.cos(TwoPi * x); },
-  'blackman': function (x) { return 0.42 - 0.50 * Math.cos(TwoPi * x) + 0.08 * Math.cos(FourPi * x); },
-  'lanczos': function (x) { return sinc(2 * x - 1); }
-};
-
-function sinc(x) {
-  return x ? Math.sin(OnePi * x) / (OnePi * x) : 1;
-}
-
-function applyWindow(arr, out, func) {
-  if (arr.length !== out.length)
-    throw 'Wrong in/out lengths';
-
-  if (!func)
-    for (let i = 0, n = arr.length; i < n; i++)
-      out[i] = arr[i];
-  else
-    for (let i = 0, n = arr.length; i < n; i++)
-      out[i] = arr[i] * func(i / (n - 1));
-}
-
-function getVolume(buf) {
-  var sum = 0;
-
-  for (var i = 0; i < buf.length; i++)
-    sum += buf[i] * buf[i];
-
-  return Math.sqrt(sum / buf.length);
-}
-
-function getQuadraticPeak(data, pos) {
-  if (pos === 0 || pos === data.length - 1 || data.length < 3)
-    return { x: pos, y: data[pos] };
-
-  var A = data[pos - 1];
-  var B = data[pos];
-  var C = data[pos + 1];
-  var D = A - 2 * B + C;
-
-  return { x: pos - (C - A) / (2 * D), y: B - (C - A) * (C - A) / (8 * D) };
-}
-
-function findPeaks(data, threshold) {
-  var peaks = [];
-  let pos = 0;
-
-  // skip while above zero
-  while (pos < data.length && data[pos] > 0) pos++;
-
-  // skip until above zero again
-  while (pos < data.length && data[pos] <= 0) pos++;
-
-  while (pos < data.length) {
-    let pos_max = -1;
-
-    // while above zero
-    while (pos < data.length && data[pos] > 0) {
-      if (pos_max < 0 || data[pos] > data[pos_max])
-        pos_max = pos;
-      pos++;
-    }
-
-    if (pos_max !== -1 && data[pos_max] >= threshold)
-      peaks.push(pos_max);
-
-    // while below zero or zero
-    while (pos < data.length && data[pos] <= 0)
-      pos++;
-  }
-
-  return peaks;
-}
-
-function findMcLeodPeak(data, threshold, cutoff) {
-  var peaks_x;
-  var peaks_q;
-  var peak_max;
-  var cutoff_value;
-  var i;
-
-  // find peak positions
-
-  peaks_x = findPeaks(data, threshold);
-  if (!peaks_x.length)
-    return -1;
-
-  // refine them
-
-  peaks_q = [];
-  peak_max = -1;
-  for (i = 0; i < peaks_x.length; i++) {
-    let peak;
-
-    peak = getQuadraticPeak(data, peaks_x[i]);
-    peaks_q.push(peak);
-    peak_max = Math.max(peak_max, peak.y);
-  }
-
-  // find first large-enough peak
-
-  cutoff_value = peak_max * cutoff;
-  for (i = 0; i < peaks_q.length; i++)
-    if (peaks_q[i].y >= cutoff_value)
-      break;
-
-  // i < peaks_q.length
-
-  return peaks_q[i].x;
-}
-
-function hzToNote(freq) {
-  var note = 12 * (Math.log(freq / 440) / Math.log(2));
-  return Math.round(note) + 49;
-}
-
-function noteString(note) {
-  const notes = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
-  const letter = notes[(note + 11) % notes.length];
-  const octave = Math.floor((note - 49) / notes.length) + 4;
-
-  return letter + (letter.length < 2 ? '.' : '') + octave;
-}
-
-function hzToNoteString(freq) {
-  return noteString(hzToNote(freq));
-}
-
-function noteToHz(note) {
-  return 440 * Math.pow(2, (note - 49) / 12);
-}
-
-const Tutorial = () => {
-  const [pitch, setPitch] = useState(null);
+const LevelSelector = () => {
+  const user = useSelector(state => state.user);
+  const storedUser = localStorage.getItem('user');
+  const [loggedInUser, setLoggedInUser] = useState(null);
+  const [selectedLevel, setSelectedLevel] = useState(null);
+  const [highlightedNote, setHighlightedNote] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Initialize Web Audio API
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(stream => {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 2048; // Adjust FFT size as needed for accuracy
-        const microphone = audioContext.createMediaStreamSource(stream);
-        microphone.connect(analyser);
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      setLoggedInUser(userData);
+    }
+  }, [storedUser]);
 
-        const dataArray = new Float32Array(analyser.fftSize);
+  useEffect(() => {
+    if (!loggedInUser) return;
 
-        const processAudio = () => {
-          analyser.getFloatTimeDomainData(dataArray);
-          const volume = getVolume(dataArray);
-          const pitchHz = findMcLeodPeak(dataArray, 0.5, 0.7);
-          setPitch({
-            frequency: pitchHz > 0 ? audioContext.sampleRate / pitchHz : null,
-            volume: volume,
-            note: pitchHz > 0 ? hzToNoteString(audioContext.sampleRate / pitchHz) : 'N/A'
-          });
-          requestAnimationFrame(processAudio);
-        };
+    // Set up the Web Audio API
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const pitchfinder = Pitchfinder.YIN();
 
-        processAudio();
+    const getUserMedia = (constraints) => {
+      return navigator.mediaDevices.getUserMedia(constraints);
+    };
 
-      }).catch(error => {
-        console.error('Error accessing microphone:', error);
-      });
-  }, []);
+    getUserMedia({ audio: true }).then(stream => {
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const data = new Float32Array(analyser.fftSize);
+      const detectPitch = () => {
+        analyser.getFloatTimeDomainData(data);
+        const pitch = pitchfinder(data);
+        if (pitch !== null) {
+          const note = getNoteFromPitch(pitch);
+          setHighlightedNote(note);
+        }
+        requestAnimationFrame(detectPitch);
+      };
+      detectPitch();
+    }).catch(err => {
+      console.error('Error accessing microphone', err);
+    });
+
+    return () => {
+      audioContext.close();
+    };
+  }, [loggedInUser]);
+
+  const getNoteFromPitch = (pitch) => {
+    const notes = [
+      'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+    ];
+    const noteNumber = Math.round(12 * (Math.log2(pitch / 440)) + 69);
+    const note = notes[noteNumber % 12];
+    return note;
+  };
+
+  if (!loggedInUser) {
+    return null;
+  }
 
   return (
-    <div>
-      <h1>Note Detector with Real-Time Pitch Detection</h1>
-      {pitch && (
-        <div>
-          <p>Detected Frequency: {pitch.frequency ? pitch.frequency.toFixed(2) + ' Hz' : 'N/A'}</p>
-          <p>Volume: {pitch.volume.toFixed(2)}</p>
-          <p>Detected Note: {pitch.note}</p>
+    <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center" id="content">
+      <div className="wrapper flex flex-col md:flex-row items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
+        <div className="w-full bg-white rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800">
+          <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
+            <div className="flex flex-col items-center">
+              <FloatingSpeechBubble message={'We will start by pressing Piano Keys one by one'}></FloatingSpeechBubble>
+              <img className="w-45 h-40" src="/simpu.png" alt="logo" />
+              <p className="text-lg text-gray-500 mt-4">Can you Try and Press the <a className="text-bold text-5xl text-orange-500">C#</a> Note on your piano</p>
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+        <div className="flex flex-col items-center w-full justify-center bg-gray-900 px-6 py-8 mx-auto md:h-screen lg:py-0">
+          <div className="keyboard-container">
+            <div className="naturals-container">
+              <button className={`button-20 ${highlightedNote === 'C' ? 'bg-green-500' : ''}`}><p>C</p></button>
+              <button className={`button-20 ${highlightedNote === 'D' ? 'bg-green-500' : ''}`}><p>D</p></button>
+              <button className={`button-20 ${highlightedNote === 'E' ? 'bg-green-500' : ''}`}><p>E</p></button>
+              <button className={`button-20 ${highlightedNote === 'F' ? 'bg-green-500' : ''}`}><p>F</p></button>
+              <button className={`button-20 ${highlightedNote === 'G' ? 'bg-green-500' : ''}`}><p>G</p></button>
+              <button className={`button-20 ${highlightedNote === 'A' ? 'bg-green-500' : ''}`}><p>A</p></button>
+              <button className={`button-20 ${highlightedNote === 'B' ? 'bg-green-500' : ''}`}><p>B</p></button>
+            </div>
+            <div className="accidentals-container">
+              <button className={`button-20 ${highlightedNote === 'C#' ? 'bg-green-500' : ''} C`}>C#</button>
+              <button className={`button-20 ${highlightedNote === 'D#' ? 'bg-green-500' : ''} D`}>D#</button>
+              <button className={`button-20 ${highlightedNote === 'F#' ? 'bg-green-500' : ''} F`}>F#</button>
+              <button className={`button-20 ${highlightedNote === 'G#' ? 'bg-green-500' : ''} G`}>G#</button>
+              <button className={`button-20 ${highlightedNote === 'A#' ? 'bg-green-500' : ''} A`}>A#</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 };
 
-export default Tutorial;
+export default LevelSelector;
