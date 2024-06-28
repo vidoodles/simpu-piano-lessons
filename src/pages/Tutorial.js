@@ -2,15 +2,21 @@ import { useState, useEffect } from "react";
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import FloatingSpeechBubble from "../components/FloatingSpeechBubble";
-import * as Pitchfinder from 'pitchfinder'; // Use pitchfinder for pitch detection
+import * as Pitchfinder from 'pitchfinder'; 
+import Confetti from "../components/Confetti";
+import FloatingText from "../components/FloatingText";
 
-const LevelSelector = () => {
+const DuolingoLayout = () => {
   const user = useSelector(state => state.user);
   const storedUser = localStorage.getItem('user');
   const [loggedInUser, setLoggedInUser] = useState(null);
-  const [selectedLevel, setSelectedLevel] = useState(null);
   const [highlightedNote, setHighlightedNote] = useState(null);
+  const [correctNotesCount, setCorrectNotesCount] = useState(false); 
   const navigate = useNavigate();
+  const [progress, setProgress] = useState(0);
+  const [feedback, setFeedback] = useState('');
+  const [question, setQuestion] = useState('Translate "Hello" to Spanish.');
+  const [answer, setAnswer] = useState('');
 
   useEffect(() => {
     if (storedUser) {
@@ -19,13 +25,25 @@ const LevelSelector = () => {
     }
   }, [storedUser]);
 
-  useEffect(() => {
-    if (!loggedInUser) return;
+  const hammingWindow = (size) => {
+    const window = new Float32Array(size);
+    for (let i = 0; i < size; i++) {
+      window[i] = 0.54 - 0.46 * Math.cos((2 * Math.PI * i) / (size - 1));
+    }
+    return window;
+  };
 
-    // Set up the Web Audio API
+  const applyWindow = (data, window) => {
+    for (let i = 0; i < data.length; i++) {
+      data[i] *= window[i];
+    }
+  };
+
+  const startAudioContext = () => {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const analyser = audioContext.createAnalyser();
-    const pitchfinder = Pitchfinder.YIN();
+    analyser.fftSize = 2048;
+    const pitchfinder = Pitchfinder.YIN({ sampleRate: audioContext.sampleRate });
 
     const getUserMedia = (constraints) => {
       return navigator.mediaDevices.getUserMedia(constraints);
@@ -36,12 +54,21 @@ const LevelSelector = () => {
       source.connect(analyser);
 
       const data = new Float32Array(analyser.fftSize);
+      const window = hammingWindow(analyser.fftSize);
+
       const detectPitch = () => {
         analyser.getFloatTimeDomainData(data);
+        applyWindow(data, window); 
         const pitch = pitchfinder(data);
         if (pitch !== null) {
           const note = getNoteFromPitch(pitch);
-          setHighlightedNote(note);
+          if (note !== highlightedNote) {
+            setHighlightedNote(note);
+            console.log(note)
+            if (note === 'C#7') {
+              setCorrectNotesCount(true); 
+            }
+          }
         }
         requestAnimationFrame(detectPitch);
       };
@@ -53,56 +80,74 @@ const LevelSelector = () => {
     return () => {
       audioContext.close();
     };
-  }, [loggedInUser]);
+  };
 
   const getNoteFromPitch = (pitch) => {
-    const notes = [
+    const noteStrings = [
       'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
     ];
-    const noteNumber = Math.round(12 * (Math.log2(pitch / 440)) + 69);
-    const note = notes[noteNumber % 12];
-    return note;
+  
+    const noteNumber = 69 + 12 * Math.log2(pitch / 440);
+    console.log(noteNumber)
+  
+    const noteIndex = Math.round(noteNumber) % 12;
+    const octave = Math.floor((Math.round(noteNumber) / 12)) - 1;
+  
+    const note = noteStrings[noteIndex];
+  
+    return `${note}${octave}`;
   };
+  
+  
+
 
   if (!loggedInUser) {
     return null;
   }
 
+
+  const handleAnswerSubmit = (e) => {
+    e.preventDefault();
+    if (answer.toLowerCase() === 'hola') {
+      setFeedback('Correct!');
+      setProgress(progress + 10);
+    } else {
+      setFeedback('Try again!');
+    }
+    setAnswer('');
+  };
+
   return (
-    <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center" id="content">
-      <div className="wrapper flex flex-col md:flex-row items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-        <div className="w-full bg-white rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800">
+    <div className="min-h-screen flex flex-col justify-between items-center p-4">
+      {/* Progress bar */}
+     
+
+      {/* Quiz section */}
+      <div className="flex flex-col items-center justify-center flex-grow w-full">
+        <div className="bg-white p-6 rounded-lg  w-full max-w-3xl">
+          <h2 className="text-xl font-semibold mb-4"></h2>
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
             <div className="flex flex-col items-center">
-              <FloatingSpeechBubble message={'We will start by pressing Piano Keys one by one'}></FloatingSpeechBubble>
-              <img className="w-45 h-40" src="/simpu.png" alt="logo" />
-              <p className="text-lg text-gray-500 mt-4">Can you Try and Press the <a className="text-bold text-5xl text-orange-500">C#</a> Note on your piano</p>
+              <div className="mb-10 ">
+            <span class="bubble">Welcome to the tutorial zone! Let's dive into learning something awesome together!</span>
             </div>
-          </div>
+            <img className="w-45 h-40" src="/simpu-whole.png" alt="logo" />
+            </div>
         </div>
-        <div className="flex flex-col items-center w-full justify-center bg-gray-900 px-6 py-8 mx-auto md:h-screen lg:py-0">
-          <div className="keyboard-container">
-            <div className="naturals-container">
-              <button className={`button-20 ${highlightedNote === 'C' ? 'bg-green-500' : ''}`}><p>C</p></button>
-              <button className={`button-20 ${highlightedNote === 'D' ? 'bg-green-500' : ''}`}><p>D</p></button>
-              <button className={`button-20 ${highlightedNote === 'E' ? 'bg-green-500' : ''}`}><p>E</p></button>
-              <button className={`button-20 ${highlightedNote === 'F' ? 'bg-green-500' : ''}`}><p>F</p></button>
-              <button className={`button-20 ${highlightedNote === 'G' ? 'bg-green-500' : ''}`}><p>G</p></button>
-              <button className={`button-20 ${highlightedNote === 'A' ? 'bg-green-500' : ''}`}><p>A</p></button>
-              <button className={`button-20 ${highlightedNote === 'B' ? 'bg-green-500' : ''}`}><p>B</p></button>
-            </div>
-            <div className="accidentals-container">
-              <button className={`button-20 ${highlightedNote === 'C#' ? 'bg-green-500' : ''} C`}>C#</button>
-              <button className={`button-20 ${highlightedNote === 'D#' ? 'bg-green-500' : ''} D`}>D#</button>
-              <button className={`button-20 ${highlightedNote === 'F#' ? 'bg-green-500' : ''} F`}>F#</button>
-              <button className={`button-20 ${highlightedNote === 'G#' ? 'bg-green-500' : ''} G`}>G#</button>
-              <button className={`button-20 ${highlightedNote === 'A#' ? 'bg-green-500' : ''} A`}>A#</button>
-            </div>
-          </div>
         </div>
       </div>
-    </section>
+
+      {/* Feedback section */}
+          {/* Feedback section */}
+      <div className="flex  w-full justify-center my-4 w-full bg-green">
+      <div className="flex items-center justify-between w-full mt-4 px-4">
+          <a></a>
+        <a href="/app/stepone" className="button-19">LETS GO!</a>
+
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default LevelSelector;
+export default DuolingoLayout;

@@ -27,7 +27,7 @@ const LevelSelector = () => {
       }).then(() => {
         logger(`Selected level ${level} saved to Firebase.`);
         if(level === "NOVICE"){
-          navigate("/tutorial");
+          navigate("/app/tutorial");
         }
       }).catch((error) => {
         logger(error, 'error');

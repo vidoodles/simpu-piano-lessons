@@ -3,6 +3,59 @@
 @tailwind utilities;
 
 @layer utilities {
+  
+.bubble {
+  background-color: #ffffff;
+  border: 1px solid #e2e2e2;
+  border-radius: 1px;
+  color: #333;
+  display: inline-block;
+  padding: 12px 24px;
+  position: relative;
+}
+.bubble:after,
+.bubble:before {
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 5px solid #eee;
+  bottom: 5px;
+  content: '';
+  left: 50%;
+  margin-left: -20px;
+  position: absolute;
+}
+
+/* Styling for second triangle (border) */
+
+.bubble:before {
+  border-left: 23px solid transparent;
+  border-right: 23px solid transparent;
+  border-top: 23px solid;
+  border-top-color: inherit; /* Can't be included in the shorthand to work */
+  bottom: -23px;
+  margin-left: -23px;
+}
+
+  .image-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border-radius: 80%;
+    overflow: hidden;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  
+  .image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+
   .page-enter {
     opacity: 0;
   }
@@ -57,24 +110,25 @@
   color: #fff;
 }
 
-.button-19 {
+.button-start {
+  
   appearance: button;
-  background-color: #4f5056;
+  background-color: #58a700;
   border: solid transparent;
   border-radius: 20px;
   border-width: 0 0 4px;
   box-sizing: border-box;
-  color: #f0b38a;
+  color: #ffffff;
   cursor: pointer;
   display: inline-block;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 1000;
   letter-spacing: .8px;
   line-height: 20px;
   margin: 0;
   outline: none;
   overflow: visible;
-  padding: 13px 16px;
+  padding: 13px 2px;
   text-align: center;
   text-transform: uppercase;
   touch-action: manipulation;
@@ -84,12 +138,78 @@
   -webkit-user-select: none;
   vertical-align: middle;
   white-space: nowrap;
-  width: 100%;
+  width: 30%;
+}
+
+.button-start:after {
+  background-clip: padding-box;
+  background-color: #58cc02;
+  border: solid transparent;
+  border-radius: 16px;
+  border-width: 0 0 4px;
+  bottom: -4px;
+  content: "";
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: -1;
+}
+
+.button-start:main,
+.button-start:focus {
+  user-select: auto;
+}
+
+.button-start:hover:not(:disabled) {
+  background-color: #58a700;
+  filter: brightness(1.1);
+  -webkit-filter: brightness(1.1);
+}
+
+.button-start:disabled {
+  cursor: auto;
+}
+
+.button-start:active {
+  border-width: 4px 0 0;
+  background: none;
+}
+
+.button-19 {
+  
+  appearance: button;
+  background-color: #58a700;
+  border: solid transparent;
+  border-radius: 20px;
+  border-width: 0 0 4px;
+  box-sizing: border-box;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 20px;
+  font-weight: 1000;
+  letter-spacing: .8px;
+  line-height: 20px;
+  margin: 0;
+  outline: none;
+  overflow: visible;
+  padding: 13px 2px;
+  text-align: center;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  transform: translateZ(0);
+  transition: filter .2s;
+  user-select: none;
+  -webkit-user-select: none;
+  vertical-align: middle;
+  white-space: nowrap;
+  width: 10%;
 }
 
 .button-19:after {
   background-clip: padding-box;
-  background-color: #606166;
+  background-color: #58cc02;
   border: solid transparent;
   border-radius: 16px;
   border-width: 0 0 4px;
@@ -108,7 +228,7 @@
 }
 
 .button-19:hover:not(:disabled) {
-  background-color: #c7570a;
+  background-color: #58a700;
   filter: brightness(1.1);
   -webkit-filter: brightness(1.1);
 }
@@ -186,7 +306,31 @@
 
 .accidentals-container button {
   width: 28px; /* Half of 58px */
+  font-size: 10px;
   background: #1b1b1e;
+  border: 1px solid #fff;
+  border-radius: 0 0 4px 4px;
+  cursor: pointer;
+  top: -149px; /* Half of -299px */
+  position: relative;
+  z-index: 1;
+  border-top: none;
+}
+
+.accidentals-container .button-21{
+  width: 28px; /* Half of 58px */
+  background: #6cf4a7;
+  border: 1px solid #fff;
+  border-radius: 0 0 4px 4px;
+  cursor: pointer;
+  top: -149px; /* Half of -299px */
+  position: relative;
+  z-index: 1;
+  border-top: none;
+}
+.accidentals-container .button-22{
+  width: 28px; /* Half of 58px */
+  background: #c85858;
   border: 1px solid #fff;
   border-radius: 0 0 4px 4px;
   cursor: pointer;
@@ -229,15 +373,33 @@
   border-radius: 0 0 6px 6px;
 }
 
+.naturals-container .button-21{
+  background: #6cf4a7;
+  border: 1px solid #6cf4a7;
+  border-radius: 0 0 6px 6px;
+}
+
+.naturals-container .button-22{
+  background: #c85858;
+  border: 1px solid #c85858;
+  border-radius: 0 0 6px 6px;
+}
+
 .button-20 {
   cursor: pointer;
 }
 
-.button-20:active, button:focus {
+.button-20 {
   color: white;
   background-color: green;
   outline: rgba(225, 225, 225, 0);
 }
+
+.button-21 {
+  color: white;
+  background-color: green;
+}
+
 
 .naturals-container p {
   font-size: 0.875em; /* Half of 1.75em */
@@ -252,7 +414,7 @@
 
 @font-face {
   font-family: 'Birdgo';
-  src: url('./fonts/Birdgo.ttf') format('truetype');
+  src: url('./fonts/DIN.ttf') format('truetype');
   font-weight: 400;
 }
 

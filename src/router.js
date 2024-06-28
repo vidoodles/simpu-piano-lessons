@@ -10,46 +10,44 @@ import LevelSelector from "./pages/LevelSelector";
 import Tutorial from "./pages/Tutorial";
 import TransitionComponent from "./components/TransitionComponent";
 import { gsapLoader } from "./utils/gsapLoader";
-
+import StepOne from "./pages/StepOne";
 
 const router = createBrowserRouter([
   {
-    path: "",
+    path: "/",
+    element: <LoginPage />,
+    loader: gsapLoader,
+  },
+  {
+    path: "/app",
     element: <App />,
     children: [
       {
-        path: "/keyboard",
-        element:
-          <Keyboard />
-        ,
-        loader: gsapLoader
+        path: "keyboard",
+        element: <Keyboard />,
+        loader: gsapLoader,
       },
       {
-        path: "/levelselector",
-        element:
-          <LevelSelector />
-        ,
-        loader: gsapLoader
+        path: "levelselector",
+        element: <LevelSelector />,
+        loader: gsapLoader,
       },
       {
-        path: "/tutorial",
-        element:
-
-          <Tutorial />
-        ,
-        loader: gsapLoader
+        path: "tutorial",
+        element: <Tutorial />,
+        loader: gsapLoader,
+      },
+      {
+        path: "stepone",
+        element: <StepOne />,
+        loader: gsapLoader,
       },
     ],
-  },
-  {
-    path: "/login",
-    element: <LoginPage />,
-    loader: gsapLoader
   },
 ]);
 
 function Router() {
-  return <RouterProvider router={router}></RouterProvider>;
+  return <RouterProvider router={router} />;
 }
 
 export default Router;

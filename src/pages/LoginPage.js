@@ -33,10 +33,10 @@ const LoginPage = () => {
                     const expertise = userData.piano_expertise
                     if (expertise === "") {
                         logger('User piano_expertise is empty, routing to level selector');
-                        navigate('/levelselector');
+                        navigate('/app/levelselector');
                     } else {
                         if (expertise === "NOVICE"){
-                            navigate('/tutorial');
+                            navigate('/app/tutorial');
                         }
                     }
 
@@ -52,7 +52,7 @@ const LoginPage = () => {
                     const userDoc = await userRef.get();
                     const userData = userDoc.data()
                     localStorage.setItem('user', JSON.stringify({ user: user.uid, email: user.email, photo: user.photoURL, name: user.displayName, ...userData }));
-                    navigate('/levelselector');
+                    navigate('/app/levelselector');
                 }
                 
             }
