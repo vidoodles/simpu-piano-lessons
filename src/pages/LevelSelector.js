@@ -51,22 +51,26 @@ const LevelSelector = () => {
   }
 
   return (
-    <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center" id="content">
-      <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-        <div className="w-full bg-white rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800">
-          <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-            <div className="flex flex-col items-center">
+    <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center border-4 border-gray-200" id="content">
+    <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0 max-w-4xl">
+      <div className="w-full bg-white rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800">
+        <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
+          <div className="flex flex-col items-center">
             <FloatingText username={loggedInUser.name}></FloatingText>
-              <img className="w-45 h-40" src="/simpu.png" alt="logo" />
-              <p className="text-lg text-gray-500 mt-4">Tell me what your expertise in using the piano</p>
-            </div>
-            <button className="button-small" onClick={() => handleLevelSelect('NOVICE')}>NOVICE</button>
-            <button className="button-small" onClick={() => handleLevelSelect('EXPERT')}>EXPERT</button>
-            <button className="button-small" onClick={() => handleLevelSelect('HALIMAW')}>HALIMAW</button>
+            <img className="w-45 h-40" src="/simpu.png" alt="logo" />
+            <p className="text-lg text-gray-500 mt-4">Tell me what your expertise in using the piano</p>
+          </div>
+          <div className="flex justify-center space-x-4">
+            <a className="big-button" onClick={() => handleLevelSelect('NOVICE')}>NOVICE</a>
+            <a className="big-button" onClick={() => handleLevelSelect('EXPERT')}>EXPERT</a>
+            <a className="big-button" onClick={() => handleLevelSelect('HALIMAW')}>HALIMAW</a>
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
+  
+  
   );
 };
 
