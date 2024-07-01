@@ -10,7 +10,11 @@ import LevelSelector from "./pages/LevelSelector";
 import Tutorial from "./pages/Tutorial";
 import TransitionComponent from "./components/TransitionComponent";
 import { gsapLoader } from "./utils/gsapLoader";
-import StepOne from "./pages/StepOne";
+import CNotes from "./pages/CNotes";
+import DNotes from "./pages/DNotes";
+import PracticeSteps from "./pages/PracticeSteps";
+import PitchDetector from "./pages/Testing";
+import Notes from "./pages/Notes";
 
 const router = createBrowserRouter([
   {
@@ -28,6 +32,16 @@ const router = createBrowserRouter([
         loader: gsapLoader,
       },
       {
+        path: "steps",
+        element: <PracticeSteps />,
+        loader: gsapLoader,
+      },
+      {
+        path: "testing",
+        element: <PitchDetector />,
+        loader: gsapLoader,
+      },
+      {
         path: "levelselector",
         element: <LevelSelector />,
         loader: gsapLoader,
@@ -38,8 +52,18 @@ const router = createBrowserRouter([
         loader: gsapLoader,
       },
       {
-        path: "stepone",
-        element: <StepOne />,
+        path: "cnotes",
+        element: <CNotes />,
+        loader: gsapLoader,
+      },
+      {
+        path: "dnotes",
+        element: <DNotes />,
+        loader: gsapLoader,
+      },
+      {
+        path: "notes",
+        element: <Notes />,
         loader: gsapLoader,
       },
     ],

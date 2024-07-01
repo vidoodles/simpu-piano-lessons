@@ -22,6 +22,17 @@ const LevelSelector = () => {
   const handleLevelSelect = (level) => {
     console.log(loggedInUser)
     if (loggedInUser) {
+      firebase.firestore().collection('users').doc(loggedInUser.user).set({
+        tutorial: {
+          c: "",
+          d: "",
+          e: "",
+          f: "",
+          g: "",
+          a: "",
+          b: "",
+        }
+      }, { merge: true })
       firebase.firestore().collection('users').doc(loggedInUser.user).update({
         piano_expertise: level
       }).then(() => {
@@ -49,9 +60,9 @@ const LevelSelector = () => {
               <img className="w-45 h-40" src="/simpu.png" alt="logo" />
               <p className="text-lg text-gray-500 mt-4">Tell me what your expertise in using the piano</p>
             </div>
-            <button className="button-19" onClick={() => handleLevelSelect('NOVICE')}>NOVICE</button>
-            <button className="button-19" onClick={() => handleLevelSelect('EXPERT')}>EXPERT</button>
-            <button className="button-19" onClick={() => handleLevelSelect('HALIMAW')}>HALIMAW</button>
+            <button className="button-small" onClick={() => handleLevelSelect('NOVICE')}>NOVICE</button>
+            <button className="button-small" onClick={() => handleLevelSelect('EXPERT')}>EXPERT</button>
+            <button className="button-small" onClick={() => handleLevelSelect('HALIMAW')}>HALIMAW</button>
           </div>
         </div>
       </div>

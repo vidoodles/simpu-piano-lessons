@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import FloatingSpeechBubble from "../components/FloatingSpeechBubble";
@@ -6,19 +6,21 @@ import * as Pitchfinder from "pitchfinder";
 import Confetti from "../components/Confetti";
 import { Howl } from "howler";
 
-const DuolingoLayout = () => {
+const DNotes = () => {
   const user = useSelector((state) => state.user);
   const storedUser = localStorage.getItem("user");
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [highlightedNote, setHighlightedNote] = useState(null);
   const [correctNotesCount, setCorrectNotesCount] = useState(false);
+  const [noteToGuess, setNoteToGuess] = useState(null);
   const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
-  const [feedback, setFeedback] = useState("");
-  const [question, setQuestion] = useState('Translate "Hello" to Spanish.');
-  const [answer, setAnswer] = useState("");
+  const audioContextRef = useRef(null);
+  const streamRef = useRef(null);
+  const rafIdRef = useRef(null);
 
   useEffect(() => {
+    setNoteToGuess(getRandomDNote);
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setLoggedInUser(userData);
@@ -32,6 +34,7 @@ const DuolingoLayout = () => {
     }
     return window;
   };
+
   const playCorrectSound = () => {
     const sound = new Howl({
       src: ["/sounds/correct.mp3"],
@@ -53,11 +56,13 @@ const DuolingoLayout = () => {
   };
 
   const startAudioContext = () => {
+    stopAudioContext(); // Stop any existing audio context before starting a new one
     playRecordingSound();
-    const audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContextRef.current = audioContext;
+
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
+    analyser.fftSize = 8192;
     const pitchfinder = Pitchfinder.YIN({
       sampleRate: audioContext.sampleRate,
     });
@@ -68,6 +73,7 @@ const DuolingoLayout = () => {
 
     getUserMedia({ audio: true })
       .then((stream) => {
+        streamRef.current = stream;
         const source = audioContext.createMediaStreamSource(stream);
         source.connect(analyser);
 
@@ -80,26 +86,38 @@ const DuolingoLayout = () => {
           const pitch = pitchfinder(data);
           if (pitch !== null) {
             const note = getNoteFromPitch(pitch);
-            if (note !== highlightedNote) {
+            if (note != "D#10" || note != "D10") {
+              console.log(note)
               setHighlightedNote(note);
-              console.log(note);
-              if (note === "C#7") {
+              if (note === noteToGuess) {
                 playCorrectSound();
                 setCorrectNotesCount(true);
               }
             }
           }
-          requestAnimationFrame(detectPitch);
+          rafIdRef.current = requestAnimationFrame(detectPitch);
         };
         detectPitch();
       })
       .catch((err) => {
         console.error("Error accessing microphone", err);
       });
+  };
 
-    return () => {
-      audioContext.close();
-    };
+  const stopAudioContext = () => {
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    if (streamRef.current) {
+      const tracks = streamRef.current.getTracks();
+      tracks.forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
   };
 
   const getNoteFromPitch = (pitch) => {
@@ -119,7 +137,6 @@ const DuolingoLayout = () => {
     ];
 
     const noteNumber = 69 + 12 * Math.log2(pitch / 440);
-    console.log(noteNumber);
 
     const noteIndex = Math.round(noteNumber) % 12;
     const octave = Math.floor(Math.round(noteNumber) / 12) - 1;
@@ -127,6 +144,19 @@ const DuolingoLayout = () => {
     const note = noteStrings[noteIndex];
 
     return `${note}${octave}`;
+  };
+
+  const getRandomDNote = () => {
+    const octaves = Array.from({ length: 9 }, (_, i) => i); // Generates [0, 1, 2, ..., 8]
+    const randomOctave = octaves[Math.floor(Math.random() * octaves.length)];
+    return `D${randomOctave}`;
+  };
+
+  const handleContinue = () => {
+    setNoteToGuess(getRandomDNote());
+    setCorrectNotesCount(false);
+    setHighlightedNote(null);
+    startAudioContext();
   };
 
   if (!loggedInUser) {
@@ -150,10 +180,15 @@ const DuolingoLayout = () => {
                   {progress}%
                 </span>
               </div>
+              <img
+                className="w-8 h-8 p-1 rounded-full ring-2 ring-gray-300 dark:ring-gray-500"
+                src={loggedInUser.photo}
+                alt="Bordered avatar"
+              />
             </div>
-            <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+            <div className="w-full bg-gray-200 rounded-full dark:bg-gray-700">
               <div
-                class="bg-green-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
+                className="bg-green-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
                 style={{ width: `${progress}%` }}
               >
                 {" "}
@@ -166,16 +201,18 @@ const DuolingoLayout = () => {
 
       {/* Quiz section */}
       <div className="flex flex-col items-center justify-center flex-grow w-full">
-        <div className="bg-white p-2  w-full max-w-3xl">
+        <div className="bg-white p-2 w-full max-w-3xl">
           <h2 className="text-xl font-semibold mb-4">Let's Practice! </h2>
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
             <div className="flex flex-col items-center">
               <p className="text-lg text-gray-500 mt-4 mb-5">
                 Click the button below and try to play the{" "}
-                <a className="text-bold text-5xl text-orange-500">C#7</a> Note
-                on your piano
+                <a className="text-bold text-5xl text-orange-500">
+                  {noteToGuess}
+                </a>{" "}
+                Note on your piano
               </p>
-              <div class="mb-5">
+              <div className="mb-5">
                 <div className="keyboard-container">
                   <div className="naturals-container">
                     <button
@@ -284,16 +321,17 @@ const DuolingoLayout = () => {
         {correctNotesCount ? (
           <div className="flex items-center justify-between w-full mt-4 px-4 bg-green-200">
             <div>
-            <div className="image-container">
-              <img
-                src="https://d35aaqx5ub95lt.cloudfront.net/images/bed2a542bc7eddc78e75fbe85260b89e.svg"
-                className="image"
-              />
+              <div className="image-container">
+                <img
+                  src="https://d35aaqx5ub95lt.cloudfront.net/images/bed2a542bc7eddc78e75fbe85260b89e.svg"
+                  className="image"
+                />
+              </div>
+              <span className="text-lg ml-3 text-green-800 font-bold">
+                Correct
+              </span>
             </div>
-            <span className="text-lg ml-3 text-green-800 font-bold">Correct</span>
-
-            </div>
-            <button onClick={startAudioContext} className="button-19">
+            <button onClick={handleContinue} className="button-19">
               CONTINUE
             </button>
 
@@ -306,4 +344,4 @@ const DuolingoLayout = () => {
   );
 };
 
-export default DuolingoLayout;
+export default DNotes;
