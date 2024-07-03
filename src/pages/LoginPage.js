@@ -35,9 +35,9 @@ const LoginPage = () => {
                         logger('User piano_expertise is empty, routing to level selector');
                         navigate('/app/levelselector');
                     } else {
-                        if (expertise === "NOVICE"){
-                            navigate('/app/novice');
-                        }
+                        const lvl = expertise.toLowerCase();
+                        const navigator = "/app/" + lvl;
+                        navigate(navigator);
                     }
 
                 } else {

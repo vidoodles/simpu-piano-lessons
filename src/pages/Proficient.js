@@ -43,7 +43,13 @@ const Proficient = () => {
           {/* Feedback section */}
       <div className="flex  w-full justify-center my-4 w-full bg-green border-t-2 mt-10">
       <div className="flex items-center justify-between w-full mt-4 px-4">
-          <a></a>
+            <div>
+                <span href="/app/levelsele"className="text-lg ml-3 text-green-800 font-bold flex items-center">
+      <img className="w-20 h-20 mr-2" src="/simpu.png" alt="logo" />
+      <a href="/app/levelselector" className="text-sm">➡️ Go back to level select?</a>
+    </span>
+            </div>
+         
         <a href="/app/proficient/steps" className="button-19">LETS GO!</a>
 
         </div>
