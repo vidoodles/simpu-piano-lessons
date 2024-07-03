@@ -12,8 +12,6 @@ Welcome to **Simpu**, your friendly penguin guide to practicing and mastering th
 - [Getting Started](#getting-started)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Features
 
@@ -54,26 +52,3 @@ Follow these instructions to get a copy of Simpu up and running on your local ma
     npm start
     ```
 2. Open your browser and navigate to `http://localhost:3000` to see Simpu in action.
-
-## Contributing
-
-We welcome contributions to make Simpu even better! Here’s how you can contribute:
-
-1. Fork the repository.
-2. Create a new branch:
-    ```sh
-    git checkout -b feature/your-feature-name
-    ```
-3. Make your changes and commit them:
-    ```sh
-    git commit -m 'Add some feature'
-    ```
-4. Push to the branch:
-    ```sh
-    git push origin feature/your-feature-name
-    ```
-5. Create a new Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
