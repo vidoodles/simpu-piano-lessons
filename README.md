@@ -2,7 +2,7 @@
 
 # Simpu - Your Penguin Piano Guide
 
-![simpu-waving](https://github.com/vidoodles/simpu-piano-lessons/assets/23020159/0f3ddeaf-14c7-4d7f-9176-ac0f84cb7621)
+<img src="https://github.com/vidoodles/simpu-piano-lessons/assets/23020159/0f3ddeaf-14c7-4d7f-9176-ac0f84cb7621" alt="Simpu Logo" width="200"/>
 
 Welcome to **Simpu**, your friendly penguin guide to practicing and mastering the piano keyboard! Whether you're a beginner or a seasoned player, Simpu is here to help you improve your piano skills through interactive exercises and fun challenges.
 
