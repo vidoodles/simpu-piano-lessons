@@ -5,6 +5,7 @@ import logger from "../utils/logger";
 import FloatingText from "../components/FloatingText";
 import { useNavigate } from 'react-router-dom';
 import Confetti from "../components/Confetti";
+import UserProfile from "../components/UserProfile";
 
 const LevelSelector = () => {
   const user = useSelector(state => state.user);
@@ -80,6 +81,7 @@ const LevelSelector = () => {
 
   return (
     <div className="min-h-screen flex flex-col justify-between items-center">
+         <UserProfile user={loggedInUser} />
       <div className="flex items-center justify-center w-full">
         <div className="bg-white p-6 rounded-lg max-w-3xl">
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
@@ -95,6 +97,9 @@ const LevelSelector = () => {
             </div>
           </div>
         </div>
+      </div>
+      <div className={`flex w-full justify-center p-6`}>
+       
       </div>
     </div>
   );
