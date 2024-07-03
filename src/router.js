@@ -7,7 +7,7 @@ import App from "./App";
 import LoginPage from "./pages/LoginPage";
 import Keyboard from "./pages/Keyboard";
 import LevelSelector from "./pages/LevelSelector";
-import Tutorial from "./pages/Tutorial";
+import Novice from "./pages/Novice";
 import TransitionComponent from "./components/TransitionComponent";
 import { gsapLoader } from "./utils/gsapLoader";
 import CNotes from "./pages/CNotes";
@@ -15,6 +15,11 @@ import DNotes from "./pages/DNotes";
 import PracticeSteps from "./pages/PracticeSteps";
 import PitchDetector from "./pages/Testing";
 import Notes from "./pages/Notes";
+import Proficient from "./pages/Proficient";
+import ProficientSteps from "./pages/ProficientSteps";
+import Songs from "./pages/Songs";
+import Master from "./pages/Master";
+import MasterSteps from "./pages/MasterSteps";
 
 const router = createBrowserRouter([
   {
@@ -32,7 +37,7 @@ const router = createBrowserRouter([
         loader: gsapLoader,
       },
       {
-        path: "steps",
+        path: "novice/steps",
         element: <PracticeSteps />,
         loader: gsapLoader,
       },
@@ -47,13 +52,33 @@ const router = createBrowserRouter([
         loader: gsapLoader,
       },
       {
-        path: "tutorial",
-        element: <Tutorial />,
+        path: "novice",
+        element: <Novice />,
         loader: gsapLoader,
       },
       {
-        path: "cnotes",
-        element: <CNotes />,
+        path: "proficient",
+        element: <Proficient />,
+        loader: gsapLoader,
+      },
+      {
+        path: "proficient/steps",
+        element: <ProficientSteps />,
+        loader: gsapLoader,
+      },
+      {
+        path: "master",
+        element: <Master />,
+        loader: gsapLoader,
+      },
+      {
+        path: "master/steps",
+        element: <MasterSteps />,
+        loader: gsapLoader,
+      },
+      {
+        path: "songpractice",
+        element: <Songs />,
         loader: gsapLoader,
       },
       {

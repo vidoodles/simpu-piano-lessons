@@ -20,6 +20,7 @@ const Notes = () => {
   const streamRef = useRef(null);
   const rafIdRef = useRef(null);
   const [noteToLetter, setNoteToLetter] = useState(null);
+  const [correctNoteDetected, setCorrectNoteDetected] = useState(false);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -86,18 +87,22 @@ const Notes = () => {
         const window = hammingWindow(analyser.fftSize);
 
         const detectPitch = () => {
+          if (!audioContextRef.current) {
+            return; // Exit the loop if the audio context has been stopped
+          }
           analyser.getFloatTimeDomainData(data);
           applyWindow(data, window);
           const pitch = pitchfinder(data);
           if (pitch !== null) {
             const note = getNoteFromPitch(pitch);
-            if (note != "D#10" || note != "D10") {
-              console.log(note)
+            if (note !== "D#10" && note !== "D10") {
               setHighlightedNote(note);
               if (note === noteToGuess) {
+                console.log(note);
                 playCorrectSound();
                 setCorrectNotesCount(true);
-                stopAudioContext(); 
+                setCorrectNoteDetected(true);
+                stopAudioContext(); // Stop the audio context if the correct note is detected
               }
             }
           }
@@ -171,7 +176,7 @@ const Notes = () => {
     await userRef.update({
       [`tutorial.${note.toString().toLowerCase()}`]: "done"
     });
-    navigate('/app/steps')
+    navigate('/app/novice/steps')
     
   };
 

@@ -36,7 +36,7 @@ const LoginPage = () => {
                         navigate('/app/levelselector');
                     } else {
                         if (expertise === "NOVICE"){
-                            navigate('/app/tutorial');
+                            navigate('/app/novice');
                         }
                     }
 
