@@ -1,6 +1,6 @@
 
 
-# Simpu - Your Penguin Piano Guide to Practicing Piano Keyboards
+# Simpu - Your Penguin Piano Guide
 
 ![simpu-waving](https://github.com/vidoodles/simpu-piano-lessons/assets/23020159/0f3ddeaf-14c7-4d7f-9176-ac0f84cb7621)
 
