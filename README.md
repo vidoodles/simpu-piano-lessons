@@ -36,7 +36,7 @@ Follow these instructions to get a copy of Simpu up and running on your local ma
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/simpu.git
+    git clone [https://github.com/yourusername/simpu.git](https://github.com/vidoodles/simpu-piano-lessons.git)
     ```
 2. Navigate to the project directory:
     ```sh
