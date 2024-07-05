@@ -5,10 +5,13 @@ import * as Pitchfinder from "pitchfinder";
 import Confetti from "../components/Confetti";
 import { Howl } from "howler";
 import firebase from '../utils/FirebaseConfig';
+import { throttle } from 'lodash';
+import {Detector_acx, Detector_yin, Detector_mpm, getConsensus_, getVolume, hzToNoteString} from '../utils/NoteDetector';
+
 
 const Notes = () => {
   const user = useSelector((state) => state.user);
-  const location = useLocation()
+  const location = useLocation();
   const storedUser = localStorage.getItem("user");
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [highlightedNote, setHighlightedNote] = useState(null);
@@ -21,11 +24,15 @@ const Notes = () => {
   const rafIdRef = useRef(null);
   const [noteToLetter, setNoteToLetter] = useState(null);
   const [correctNoteDetected, setCorrectNoteDetected] = useState(false);
+  const OnePi  = 1 * Math.PI;
+  const TwoPi  = 2 * Math.PI;
+  const FourPi = 4 * Math.PI;
+  const noteQueue = ["C5", "C6"];
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const noteLetter = searchParams.get('note');
-    setNoteToLetter(noteLetter.toUpperCase())
+    setNoteToLetter(noteLetter.toUpperCase());
     setNoteToGuess(getRandomNote(noteLetter));
     if (storedUser) {
       const userData = JSON.parse(storedUser);
@@ -55,64 +62,249 @@ const Notes = () => {
     sound.play();
   };
 
+  function sinc(x) { return x ? Math.sin(OnePi * x) / (OnePi * x) : 1; }
+
+
   const applyWindow = (data, window) => {
     for (let i = 0; i < data.length; i++) {
       data[i] *= window[i];
     }
   };
 
-  const startAudioContext = () => {
+  const NoteDetector = (dataSize, sampleRate, windowType) => {
+    const tapers = {
+      'raw': null,
+      'hann': function (x) { return 1 / 2 - 1 / 2 * Math.cos(2 * Math.PI * x); },
+      'hamming': function (x) { return 25 / 46 - 21 / 46 * Math.cos(2 * Math.PI * x); },
+      'blackman': function (x) { return 0.42 - 0.50 * Math.cos(2 * Math.PI * x) + 0.08 * Math.cos(4 * Math.PI * x); },
+      'lanczos': function (x) { return sinc(2 * x - 1); }
+    };
+  
+    const trace = function (x) { };
+    const close_threshold = 0.03;
+    const track_lone_ms = 50;
+    const track_cons_ms = 50;
+    const detrack_min_volume = 0.01;
+    const detrack_est_none_ms = 100;
+    const detrack_est_some_ms = 50;
+    const stable_note_ms = 50;
+    const taper = tapers[windowType];
+  
+    let candidate = null;
+    let tracking = null;
+  
+    const detectors = [
+      Detector_acx(dataSize, sampleRate),
+      Detector_yin(dataSize, sampleRate),
+      Detector_mpm(dataSize, sampleRate),
+    ];
+  
+    const buf = new Float32Array(dataSize);
+    const est = new Float32Array(detectors.length);
+    let vol = 0;
+  
+    const isClose_ = function (a, b) {
+      return Math.abs(a - b) < Math.abs(a + b) * 0.5 * close_threshold;
+    };
+  
+    const startTracking_ = function (hz, start) {
+      candidate = null;
+      tracking = { freq: hz, start: start, missed: 0 };
+  
+      detectors[0].volume_min /= 2;  // acx
+      detectors[1].threshold *= 2;   // yin
+      detectors[2].peak_ignore /= 2; // mpm
+    };
+  
+    const stopTracking_ = function () {
+      tracking = null;
+  
+      detectors[0].volume_min *= 2;  // acx
+      detectors[1].threshold /= 2;   // yin
+      detectors[2].peak_ignore *= 2; // mpm
+    };
+
+    const getConsensus_ = function(est)
+    {
+        let res = { cons: 0, lone: 0 };
+        let num = 0;
+
+        for (let i=0; i+1 < est.length; i++)
+        {
+            if (est[i] <= 0)
+                continue;
+
+            if (res.lone == 0) res.lone = est[i];
+            else               res.lone = -1;
+
+            for (let j=i+1; i+j < est.length; j++)
+            {
+                if (est[j] <= 0)
+                    continue;
+
+                if (this.isClose_(est[i], est[j]))
+                {
+                    res.cons += (est[i] + est[j])/2;
+                    num++;
+                }
+            }
+        }
+
+        if (num)
+            res.cons /= num;
+
+        if (res.cons || res.lone)
+        {
+            function v6(v) { return v.toFixed(0).toString().padStart(6); }
+
+            let x = '';
+            for (let i=0; i<est.length; i++) x += v6(est[i]);
+            this.trace( 'est[' + x + '], consensus: ' + v6(res.cons) + ', lone_est: ' + v6(res.lone));
+        }
+
+        return res;
+    }
+  
+    const update = function (data) {
+      applyWindow(data, buf, taper);
+  
+      for (let i = 0; i < detectors.length; i++)
+        est[i] = detectors[i].process(buf);
+  
+      let res = getConsensus_(est);
+      let freq = (res.cons <= 0) ? res.lone : res.cons;
+      let lone = (res.cons <= 0);
+  
+      vol = getVolume(data);
+  
+      if (tracking) {
+        if (isClose_(tracking.freq, freq))
+          return;
+  
+        if (res.cons <= 0) {
+          for (let i = 0; i < est.length; i++)
+            if (isClose_(est[i], tracking.freq)) {
+              tracking.missed = 0;
+              return;
+            }
+  
+          if (vol < detrack_min_volume) {
+            trace('** TOO QUIET @ ' + vol.toFixed(5));
+          } else {
+            if (!tracking.missed) {
+              tracking.missed = performance.now();
+              return;
+            }
+  
+            let ms = performance.now() - tracking.missed;
+  
+            if (res.lone != 0 && ms < detrack_est_some_ms ||
+              res.lone == 0 && ms < detrack_est_none_ms)
+              return;
+  
+            trace('** GONE STALE in ' + ms.toFixed(0) + ' ms ');
+          }
+        }
+  
+        stopTracking_();
+      }
+  
+      if (!tracking) {
+        if (res.cons <= 0 && res.lone <= 0) {
+          candidate = null;
+          return;
+        }
+  
+        if (!candidate ||
+          !isClose_(candidate.freq, freq)) {
+          candidate = { freq: freq, lone: lone, start: performance.now() }
+          return;
+        }
+  
+        candidate.freq = (candidate.freq + freq) / 2;
+        candidate.lone = lone;
+  
+        let ms = performance.now() - candidate.start;
+  
+        if (ms > track_cons_ms && !candidate.lone) {
+          trace('** TRACKING by consensus');
+          startTracking_(candidate.freq, candidate.start);
+          return;
+        }
+  
+        if (ms > track_lone_ms && candidate.lone) {
+          trace('** TRACKING by lone estimate');
+          startTracking_(candidate.freq, candidate.start);
+          return;
+        }
+  
+        // still priming
+      }
+    };
+  
+    return {
+      update,
+      getNote: function () {
+        if (candidate && candidate.freq) {
+          return {
+            freq: candidate.freq,
+            stable: true, // Example, adjust as per your logic
+          };
+        } else {
+          return {
+            freq: 0, // Default or placeholder value
+            stable: false,
+          };
+        }
+      },
+      // Other methods or properties as needed
+    };
+  };
+
+
+  const startAudioContext = async () => {
     stopAudioContext(); // Stop any existing audio context before starting a new one
     playRecordingSound();
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     audioContextRef.current = audioContext;
-
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 8192;
-    const pitchfinder = Pitchfinder.YIN({
-      sampleRate: audioContext.sampleRate,
-    });
-
+    analyser.fftSize = 4096;
+    analyser.v_uint8 = new Uint8Array(4096);
+    analyser.v_float = new Float32Array(4096);
+    source.connect(analyser);
+  
+    const detector = NoteDetector(2048, audioContext.sampleRate, 'hamming');
+  
+    const throttledIncrement = throttle(() => {
+      update();
+    }, 100); // 100ms throttle time
+  
+    function update() {
+      if (!analyser) return; // Ensure analyzer is initialized
+  
+      const input_8 = analyser.v_uint8;
+      const input_f = analyser.v_float;
+  
+      analyser.getByteTimeDomainData(input_8);
+  
+      for (let i = 0; i < input_8.length; i++)
+        input_f[i] = input_8[i] / 128.0 - 1.0;
+  
+      detector.update(input_f);
+  
+      const note = detector.getNote();
+      const desc = note && note.stable ? hzToNoteString(note.freq) : "";
+      requestAnimationFrame(update);
+    }
+  
+    // Start analyzing audio
+    requestAnimationFrame(update);
+  
     const getUserMedia = (constraints) => {
       return navigator.mediaDevices.getUserMedia(constraints);
     };
-
-    getUserMedia({ audio: true })
-      .then((stream) => {
-        streamRef.current = stream;
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-
-        const data = new Float32Array(analyser.fftSize);
-        const window = hammingWindow(analyser.fftSize);
-
-        const detectPitch = () => {
-          if (!audioContextRef.current) {
-            return; // Exit the loop if the audio context has been stopped
-          }
-          analyser.getFloatTimeDomainData(data);
-          applyWindow(data, window);
-          const pitch = pitchfinder(data);
-          if (pitch !== null) {
-            const note = getNoteFromPitch(pitch);
-            if (note !== "D#10" && note !== "D10") {
-              setHighlightedNote(note);
-              if (note === noteToGuess) {
-                console.log(note);
-                playCorrectSound();
-                setCorrectNotesCount(true);
-                setCorrectNoteDetected(true);
-                stopAudioContext(); // Stop the audio context if the correct note is detected
-              }
-            }
-          }
-          rafIdRef.current = requestAnimationFrame(detectPitch);
-        };
-        detectPitch();
-      })
-      .catch((err) => {
-        console.error("Error accessing microphone", err);
-      });
   };
 
   const stopAudioContext = () => {
@@ -157,6 +349,13 @@ const Notes = () => {
     return `${note}${octave}`;
   };
 
+  const isValidPianoNote = (note) => {
+    const match = note.match(/^([A-G]#?)(\d)$/);
+    if (!match) return false;
+    const [, , octave] = match;
+    return octave >= 0 && octave <= 8;
+  };
+
   const getRandomNote = (note) => {
     const octaves = Array.from({ length: 9 }, (_, i) => i); // Generates [0, 1, 2, ..., 8]
     const randomOctave = octaves[Math.floor(Math.random() * octaves.length)];
@@ -164,20 +363,18 @@ const Notes = () => {
   };
 
   const handleContinue = () => {
-    setNoteToGuess(getRandomNote());
+    setNoteToGuess(getRandomNote(noteToLetter));
     setCorrectNotesCount(false);
     setHighlightedNote(null);
     startAudioContext();
   };
-
 
   const handleNoteDone = async (note) => {
     const userRef = firebase.firestore().collection('users').doc(loggedInUser.user);
     await userRef.update({
       [`tutorial.${note.toString().toLowerCase()}`]: "done"
     });
-    navigate('/app/novice/steps')
-    
+    navigate('/app/novice/steps');
   };
 
   if (!loggedInUser) {
@@ -331,6 +528,16 @@ const Notes = () => {
               <button onClick={startAudioContext} className="button-start">
                 START PRACTICING!
               </button>
+              {highlightedNote && (
+                <div className="text-lg text-gray-500 mt-4 mb-5">
+                  Detected Note: {highlightedNote}
+                </div>
+              )}
+              {correctNotesCount && (
+                <div className="text-lg text-gray-500 mt-4 mb-5">
+                  Correct note detected!
+                </div>
+              )}
             </div>
           </div>
         </div>
