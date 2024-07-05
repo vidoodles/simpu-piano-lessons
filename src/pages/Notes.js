@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import * as Pitchfinder from "pitchfinder";
-import Confetti from "../components/Confetti";
 import { Howl } from "howler";
 import firebase from '../utils/FirebaseConfig';
-import { throttle } from 'lodash';
-import {Detector_acx, Detector_yin, Detector_mpm, getConsensus_, getVolume, hzToNoteString} from '../utils/NoteDetector';
-
+import NoteDetector from "../utils/DetectorClass";
+import { hzToNoteString } from '../utils/NoteDetector';
+import Confetti from '../components/Confetti';
 
 const Notes = () => {
   const user = useSelector((state) => state.user);
@@ -15,38 +13,80 @@ const Notes = () => {
   const storedUser = localStorage.getItem("user");
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [highlightedNote, setHighlightedNote] = useState(null);
-  const [correctNotesCount, setCorrectNotesCount] = useState(false);
+  const [correctNotesCount, setCorrectNotesCount] = useState(0);
   const [noteToGuess, setNoteToGuess] = useState(null);
   const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
   const audioContextRef = useRef(null);
-  const streamRef = useRef(null);
-  const rafIdRef = useRef(null);
-  const [noteToLetter, setNoteToLetter] = useState(null);
-  const [correctNoteDetected, setCorrectNoteDetected] = useState(false);
-  const OnePi  = 1 * Math.PI;
-  const TwoPi  = 2 * Math.PI;
-  const FourPi = 4 * Math.PI;
-  const noteQueue = ["C5", "C6"];
+  const [detectionEnabled, setDetectionEnabled] = useState(true);
+  const searchParams = new URLSearchParams(location.search);
+  const noteLetter = searchParams.get('note');
+
+  const [noteQueue, setNoteQueue] = useState([]);
+
+  function getRandomNoteWithOctave(noteLetter) {
+    const octave = getRandomOctave();
+    const noteWithOctave = `${noteLetter}${octave}`;
+    return noteWithOctave;
+  }
+  
+  function getRandomOctave() {
+    return Math.floor(Math.random() * (7 - 3 + 1)) + 3; // Generates a random integer between 3 and 7 (inclusive)
+  }
+
+  
+  const [currentPosition, setCurrentPosition] = useState(0);
+  const analyser = useRef(null);
+  const source = useRef(null);
+  const detector = useRef(null);
+  const stream = useRef(null);
+  const lastNote = useRef(null);
+  const lastVol = useRef(0);
+  const noteToGuessRef = useRef(null); // useRef for noteToGuess
+  const [noteToLetter, setNoteToletter] = useState("");
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const noteLetter = searchParams.get('note');
-    setNoteToLetter(noteLetter.toUpperCase());
-    setNoteToGuess(getRandomNote(noteLetter));
+    if (noteLetter) {
+      const notes = [];
+      for (let i = 0; i < 7; i++) {
+        if (i === 0 || i % 2 === 0) { // Add index 0 and skip odd indices
+          notes.push(getRandomNoteWithOctave(noteLetter));
+        } else {
+          notes.push(""); // Push an empty string for odd indices you want to skip
+        }
+      }
+      setNoteQueue(notes);
+    }
+  }, [noteLetter]);
+
+  function getRandomNoteWithOctave(noteLetter) {
+    const octave = getRandomOctave();
+    const noteWithOctave = `${noteLetter}${getSharpOrNatural()}${octave}`;
+    return noteWithOctave;
+  }
+
+  function getRandomOctave() {
+    return Math.floor(Math.random() * (7 - 3 + 1)) + 3; // Generates a random integer between 3 and 7 (inclusive)
+  }
+
+  function getSharpOrNatural() {
+    return Math.random() < 0.5 ? "#" : ""; // Randomly chooses between sharp (#) or natural (empty string)
+  }
+  
+  useEffect(() => {
+
+    setNoteToGuess(noteQueue[0]); // Set the first note in the queue
+    noteToGuessRef.current = noteQueue[0]; // Initialize noteToGuessRef
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setLoggedInUser(userData);
     }
-  }, [storedUser]);
+  }, [storedUser, noteQueue, location.search]);
 
-  const hammingWindow = (size) => {
-    const window = new Float32Array(size);
-    for (let i = 0; i < size; i++) {
-      window[i] = 0.54 - 0.46 * Math.cos((2 * Math.PI * i) / (size - 1));
-    }
-    return window;
-  };
+  useEffect(() => {
+    // Update noteToGuessRef whenever noteToGuess changes
+    noteToGuessRef.current = noteToGuess;
+  }, [noteToGuess]);
 
   const playCorrectSound = () => {
     const sound = new Howl({
@@ -62,311 +102,88 @@ const Notes = () => {
     sound.play();
   };
 
-  function sinc(x) { return x ? Math.sin(OnePi * x) / (OnePi * x) : 1; }
-
-
-  const applyWindow = (data, window) => {
-    for (let i = 0; i < data.length; i++) {
-      data[i] *= window[i];
-    }
-  };
-
-  const NoteDetector = (dataSize, sampleRate, windowType) => {
-    const tapers = {
-      'raw': null,
-      'hann': function (x) { return 1 / 2 - 1 / 2 * Math.cos(2 * Math.PI * x); },
-      'hamming': function (x) { return 25 / 46 - 21 / 46 * Math.cos(2 * Math.PI * x); },
-      'blackman': function (x) { return 0.42 - 0.50 * Math.cos(2 * Math.PI * x) + 0.08 * Math.cos(4 * Math.PI * x); },
-      'lanczos': function (x) { return sinc(2 * x - 1); }
-    };
-  
-    const trace = function (x) { };
-    const close_threshold = 0.03;
-    const track_lone_ms = 50;
-    const track_cons_ms = 50;
-    const detrack_min_volume = 0.01;
-    const detrack_est_none_ms = 100;
-    const detrack_est_some_ms = 50;
-    const stable_note_ms = 50;
-    const taper = tapers[windowType];
-  
-    let candidate = null;
-    let tracking = null;
-  
-    const detectors = [
-      Detector_acx(dataSize, sampleRate),
-      Detector_yin(dataSize, sampleRate),
-      Detector_mpm(dataSize, sampleRate),
-    ];
-  
-    const buf = new Float32Array(dataSize);
-    const est = new Float32Array(detectors.length);
-    let vol = 0;
-  
-    const isClose_ = function (a, b) {
-      return Math.abs(a - b) < Math.abs(a + b) * 0.5 * close_threshold;
-    };
-  
-    const startTracking_ = function (hz, start) {
-      candidate = null;
-      tracking = { freq: hz, start: start, missed: 0 };
-  
-      detectors[0].volume_min /= 2;  // acx
-      detectors[1].threshold *= 2;   // yin
-      detectors[2].peak_ignore /= 2; // mpm
-    };
-  
-    const stopTracking_ = function () {
-      tracking = null;
-  
-      detectors[0].volume_min *= 2;  // acx
-      detectors[1].threshold /= 2;   // yin
-      detectors[2].peak_ignore *= 2; // mpm
-    };
-
-    const getConsensus_ = function(est)
-    {
-        let res = { cons: 0, lone: 0 };
-        let num = 0;
-
-        for (let i=0; i+1 < est.length; i++)
-        {
-            if (est[i] <= 0)
-                continue;
-
-            if (res.lone == 0) res.lone = est[i];
-            else               res.lone = -1;
-
-            for (let j=i+1; i+j < est.length; j++)
-            {
-                if (est[j] <= 0)
-                    continue;
-
-                if (this.isClose_(est[i], est[j]))
-                {
-                    res.cons += (est[i] + est[j])/2;
-                    num++;
-                }
-            }
-        }
-
-        if (num)
-            res.cons /= num;
-
-        if (res.cons || res.lone)
-        {
-            function v6(v) { return v.toFixed(0).toString().padStart(6); }
-
-            let x = '';
-            for (let i=0; i<est.length; i++) x += v6(est[i]);
-            this.trace( 'est[' + x + '], consensus: ' + v6(res.cons) + ', lone_est: ' + v6(res.lone));
-        }
-
-        return res;
-    }
-  
-    const update = function (data) {
-      applyWindow(data, buf, taper);
-  
-      for (let i = 0; i < detectors.length; i++)
-        est[i] = detectors[i].process(buf);
-  
-      let res = getConsensus_(est);
-      let freq = (res.cons <= 0) ? res.lone : res.cons;
-      let lone = (res.cons <= 0);
-  
-      vol = getVolume(data);
-  
-      if (tracking) {
-        if (isClose_(tracking.freq, freq))
-          return;
-  
-        if (res.cons <= 0) {
-          for (let i = 0; i < est.length; i++)
-            if (isClose_(est[i], tracking.freq)) {
-              tracking.missed = 0;
-              return;
-            }
-  
-          if (vol < detrack_min_volume) {
-            trace('** TOO QUIET @ ' + vol.toFixed(5));
-          } else {
-            if (!tracking.missed) {
-              tracking.missed = performance.now();
-              return;
-            }
-  
-            let ms = performance.now() - tracking.missed;
-  
-            if (res.lone != 0 && ms < detrack_est_some_ms ||
-              res.lone == 0 && ms < detrack_est_none_ms)
-              return;
-  
-            trace('** GONE STALE in ' + ms.toFixed(0) + ' ms ');
-          }
-        }
-  
-        stopTracking_();
-      }
-  
-      if (!tracking) {
-        if (res.cons <= 0 && res.lone <= 0) {
-          candidate = null;
-          return;
-        }
-  
-        if (!candidate ||
-          !isClose_(candidate.freq, freq)) {
-          candidate = { freq: freq, lone: lone, start: performance.now() }
-          return;
-        }
-  
-        candidate.freq = (candidate.freq + freq) / 2;
-        candidate.lone = lone;
-  
-        let ms = performance.now() - candidate.start;
-  
-        if (ms > track_cons_ms && !candidate.lone) {
-          trace('** TRACKING by consensus');
-          startTracking_(candidate.freq, candidate.start);
-          return;
-        }
-  
-        if (ms > track_lone_ms && candidate.lone) {
-          trace('** TRACKING by lone estimate');
-          startTracking_(candidate.freq, candidate.start);
-          return;
-        }
-  
-        // still priming
-      }
-    };
-  
-    return {
-      update,
-      getNote: function () {
-        if (candidate && candidate.freq) {
-          return {
-            freq: candidate.freq,
-            stable: true, // Example, adjust as per your logic
-          };
-        } else {
-          return {
-            freq: 0, // Default or placeholder value
-            stable: false,
-          };
-        }
-      },
-      // Other methods or properties as needed
-    };
-  };
-
-
   const startAudioContext = async () => {
-    stopAudioContext(); // Stop any existing audio context before starting a new one
     playRecordingSound();
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     audioContextRef.current = audioContext;
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    const source = audioContext.createMediaStreamSource(stream);
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 4096;
-    analyser.v_uint8 = new Uint8Array(4096);
-    analyser.v_float = new Float32Array(4096);
-    source.connect(analyser);
-  
-    const detector = NoteDetector(2048, audioContext.sampleRate, 'hamming');
-  
-    const throttledIncrement = throttle(() => {
+    stream.current = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    onOpened(stream.current);
+
+    function onOpened(_stream) {
+      source.current = audioContext.createMediaStreamSource(_stream);
+      initAnalyzer();
       update();
-    }, 100); // 100ms throttle time
-  
+    }
+
+    function initAnalyzer() {
+      const analyserNew = audioContext.createAnalyser();
+      analyserNew.fftSize = 2048;
+      analyserNew.v_uint8 = new Uint8Array(2048);
+      analyserNew.v_float = new Float32Array(2048);
+      source.current.connect(analyserNew);
+      const detectorRef = new NoteDetector(2048, audioContext.sampleRate, 'hamming');
+      analyser.current = analyserNew;
+      detector.current = detectorRef;
+    }
+
     function update() {
-      if (!analyser) return; // Ensure analyzer is initialized
-  
-      const input_8 = analyser.v_uint8;
-      const input_f = analyser.v_float;
-  
-      analyser.getByteTimeDomainData(input_8);
-  
-      for (let i = 0; i < input_8.length; i++)
+      if (!analyser.current) return; // Ensure analyzer is initialized
+
+      const input_8 = analyser.current.v_uint8;
+      const input_f = analyser.current.v_float;
+
+      analyser.current.getByteTimeDomainData(input_8);
+
+      for (let i = 0; i < input_8.length; i++) {
         input_f[i] = input_8[i] / 128.0 - 1.0;
-  
-      detector.update(input_f);
-  
-      const note = detector.getNote();
+      }
+
+      detector.current.update(input_f);
+
+      const note = detector.current.getNote();
       const desc = note && note.stable ? hzToNoteString(note.freq) : "";
+      const currentNote = desc.replace(".", "");
+      
+      setHighlightedNote(currentNote.slice(0, -1)); 
+
+      console.log(`Detected note: ${currentNote}, Note to guess: ${noteToGuessRef.current}`);
+
+      if (currentPosition < noteQueue.length) {
+        const expectedNote = noteQueue[currentPosition];
+        if (
+          lastNote.current !== currentNote ||
+          ((detector.current.vol - lastVol.current) / lastVol.current) * 100 > 50
+        ) {
+          lastNote.current = currentNote;
+          lastVol.current = detector.current.vol;
+
+          if (noteToGuessRef.current === currentNote) {
+            playCorrectSound();
+            setHighlightedNote(noteToGuessRef.current);
+            setCorrectNotesCount((prevCount) => {
+              const newCount = prevCount + 1;
+              setProgress((newCount / noteQueue.length) * 100);
+
+              return newCount;
+            });
+            setCurrentPosition(prevPosition => {
+              const nextPosition = prevPosition + 1;
+              if (nextPosition < noteQueue.length) {
+                setNoteToGuess(noteQueue[nextPosition]); // Update noteToGuess
+                noteToGuessRef.current = noteQueue[nextPosition]; // Update noteToGuessRef
+              }
+              return nextPosition;
+            });
+            
+          }
+        }
+      }
+
       requestAnimationFrame(update);
     }
-  
+
     // Start analyzing audio
     requestAnimationFrame(update);
-  
-    const getUserMedia = (constraints) => {
-      return navigator.mediaDevices.getUserMedia(constraints);
-    };
-  };
-
-  const stopAudioContext = () => {
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    if (streamRef.current) {
-      const tracks = streamRef.current.getTracks();
-      tracks.forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
-    }
-  };
-
-  const getNoteFromPitch = (pitch) => {
-    const noteStrings = [
-      "C",
-      "C#",
-      "D",
-      "D#",
-      "E",
-      "F",
-      "F#",
-      "G",
-      "G#",
-      "A",
-      "A#",
-      "B",
-    ];
-
-    const noteNumber = 69 + 12 * Math.log2(pitch / 440);
-
-    const noteIndex = Math.round(noteNumber) % 12;
-    const octave = Math.floor(Math.round(noteNumber) / 12) - 1;
-
-    const note = noteStrings[noteIndex];
-
-    return `${note}${octave}`;
-  };
-
-  const isValidPianoNote = (note) => {
-    const match = note.match(/^([A-G]#?)(\d)$/);
-    if (!match) return false;
-    const [, , octave] = match;
-    return octave >= 0 && octave <= 8;
-  };
-
-  const getRandomNote = (note) => {
-    const octaves = Array.from({ length: 9 }, (_, i) => i); // Generates [0, 1, 2, ..., 8]
-    const randomOctave = octaves[Math.floor(Math.random() * octaves.length)];
-    return `${note}${randomOctave}`;
-  };
-
-  const handleContinue = () => {
-    setNoteToGuess(getRandomNote(noteToLetter));
-    setCorrectNotesCount(false);
-    setHighlightedNote(null);
-    startAudioContext();
   };
 
   const handleNoteDone = async (note) => {
@@ -374,7 +191,8 @@ const Notes = () => {
     await userRef.update({
       [`tutorial.${note.toString().toLowerCase()}`]: "done"
     });
-    navigate('/app/novice/steps');
+    navigate('/app/novice/steps')
+    
   };
 
   if (!loggedInUser) {
@@ -403,7 +221,7 @@ const Notes = () => {
                 src={loggedInUser.photo}
                 alt="Bordered avatar"
               />
-                   <button   onClick={() => handleNoteDone(noteToLetter)} className="button-small">
+              <button onClick={() => handleNoteDone(noteToLetter)} className="button-small">
                 Done
               </button>
             </div>
@@ -413,7 +231,7 @@ const Notes = () => {
                 style={{ width: `${progress}%` }}
               >
                 {" "}
-                45%
+                {progress}%
               </div>
             </div>
           </div>
@@ -434,7 +252,7 @@ const Notes = () => {
                 Note on your piano
               </p>
               <div className="mb-5">
-                <div className="keyboard-container">
+              <div className="keyboard-container">
                   <div className="naturals-container">
                     <button
                       className={`${
@@ -525,32 +343,22 @@ const Notes = () => {
                   </div>
                 </div>
               </div>
-              <button onClick={startAudioContext} className="button-start">
+              
+              
+              <div className="space-y-4 md:space-y-6">
+              <a onClick={startAudioContext} className="button-start">
                 START PRACTICING!
-              </button>
-              {highlightedNote && (
-                <div className="text-lg text-gray-500 mt-4 mb-5">
-                  Detected Note: {highlightedNote}
-                </div>
-              )}
-              {correctNotesCount && (
-                <div className="text-lg text-gray-500 mt-4 mb-5">
-                  Correct note detected!
-                </div>
-              )}
+              </a>
+              </div>
+            </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Feedback section */}
-      <div
-        className={`flex w-full justify-center p-6 ${
-          correctNotesCount ? "bg-green-200" : ""
-        }`}
-      >
-        {correctNotesCount ? (
-          <div className="flex items-center justify-between w-full mt-4 px-4 bg-green-200">
+      {/* Confetti */}
+      {correctNotesCount === noteQueue.length && 
+       <div className="flex w-full justify-center p-6 bg-green-200">
+  <div className="flex items-center justify-between w-full mt-4 px-4 bg-green-200">
             <div>
               <div className="image-container">
                 <img
@@ -562,15 +370,13 @@ const Notes = () => {
                 Correct
               </span>
             </div>
-            <button onClick={handleContinue} className="button-19">
+            <button onClick={handleNoteDone(noteToLetter)} className="button-19">
               CONTINUE
             </button>
-
-            <Confetti />
-          </div>
-        ) : null}
+      <Confetti />
       </div>
-      <div></div>
+      </div>
+      }
     </div>
   );
 };

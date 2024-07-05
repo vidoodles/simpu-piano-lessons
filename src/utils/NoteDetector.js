@@ -17,7 +17,7 @@ export function Detector_mpm(dataSize, sampleRate) {
 
     const process = function(buf) {
         if (tmp.length !== buf.length)
-            throw 'Wrong buf.length';
+            console.log("Wrong buf.length")
 
         const nsdf = tmp;
         let peak;
@@ -210,7 +210,6 @@ function findPeaks(data, threshold) {
 }
 function noteString(note)
 {
-    console.log(note)
     const notes = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
     const letter = notes[(note - 1) % notes.length];
     const octave = Math.floor((note + 8) / notes.length); // Adjusted to shift one octave higher
@@ -220,7 +219,6 @@ function noteString(note)
 
 function hzToNote(freq)
 {   
-    console.log(freq)
     var note = 12 * (Math.log(freq / 440) / Math.log(2));
     return Math.round(note) + 49;
 }
