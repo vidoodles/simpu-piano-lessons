@@ -163,18 +163,16 @@ const Notes = () => {
             setCorrectNotesCount((prevCount) => {
               const newCount = prevCount + 1;
               setProgress((newCount / noteQueue.length) * 100);
-
+              setCurrentPosition(prevPosition => {
+                const nextPosition = prevPosition + 1;
+                if (nextPosition < noteQueue.length) {
+                  setNoteToGuess(noteQueue[nextPosition]);
+                  noteToGuessRef.current = noteQueue[nextPosition];
+                }
+                return nextPosition;
+              });
               return newCount;
             });
-            setCurrentPosition(prevPosition => {
-              const nextPosition = prevPosition + 1;
-              if (nextPosition < noteQueue.length) {
-                setNoteToGuess(noteQueue[nextPosition]); // Update noteToGuess
-                noteToGuessRef.current = noteQueue[nextPosition]; // Update noteToGuessRef
-              }
-              return nextPosition;
-            });
-            
           }
         }
       }
