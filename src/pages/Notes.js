@@ -44,6 +44,8 @@ const Notes = () => {
   const lastVol = useRef(0);
   const noteToGuessRef = useRef(null); // useRef for noteToGuess
   const [noteToLetter, setNoteToletter] = useState("");
+  const [slicedNoteToGuess, setSlicedNoteToGuess] = useState(true);
+
 
   useEffect(() => {
     if (noteLetter) {
@@ -147,7 +149,6 @@ const Notes = () => {
       setHighlightedNote(currentNote.slice(0, -1)); 
 
       console.log(`Detected note: ${currentNote}, Note to guess: ${noteToGuessRef.current}`);
-
       if (currentPosition < noteQueue.length) {
         const expectedNote = noteQueue[currentPosition];
         if (
@@ -159,20 +160,29 @@ const Notes = () => {
 
           if (noteToGuessRef.current === currentNote) {
             playCorrectSound();
+            setSlicedNoteToGuess(noteToGuessRef.current.slice(0, -1))
             setHighlightedNote(noteToGuessRef.current);
             setCorrectNotesCount((prevCount) => {
               const newCount = prevCount + 1;
-              setProgress((newCount / noteQueue.length) * 100);
-              setCurrentPosition(prevPosition => {
-                const nextPosition = prevPosition + 1;
-                if (nextPosition < noteQueue.length) {
-                  setNoteToGuess(noteQueue[nextPosition]);
-                  noteToGuessRef.current = noteQueue[nextPosition];
-                }
-                return nextPosition;
-              });
+              const filteredArray = noteQueue.filter(str => str !== "");
+              const pr_igress = Math.round((newCount / filteredArray.length) * 100)
+              setProgress(pr_igress);
+              if(pr_igress == 100){
+                // call the stop here
+              }else{
+                setCurrentPosition(prevPosition => {
+                  const nextPosition = prevPosition + 1;
+                  if (nextPosition < noteQueue.length) {
+                    setNoteToGuess(noteQueue[nextPosition]);
+                    noteToGuessRef.current = noteQueue[nextPosition];
+                  }
+                  return nextPosition;
+                });
+              }
               return newCount;
             });
+          }else{
+  
           }
         }
       }
@@ -187,7 +197,8 @@ const Notes = () => {
   const handleNoteDone = async (note) => {
     const userRef = firebase.firestore().collection('users').doc(loggedInUser.user);
     await userRef.update({
-      [`tutorial.${note.toString().toLowerCase()}`]: "done"
+      [`tutorial.${    noteLetter
+        .toString().toLowerCase()}`]: "done"
     });
     navigate('/app/novice/steps')
     
@@ -253,50 +264,78 @@ const Notes = () => {
               <div className="keyboard-container">
                   <div className="naturals-container">
                     <button
-                      className={`${
-                        highlightedNote === "C7" ? "button-22" : "button-20"
+                      className={`button-20 ${
+                        highlightedNote === "C" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "C" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       }`}
                     >
                       <p>C</p>
                     </button>
                     <button
                       className={`${
-                        highlightedNote === "D7" ? "button-22" : "button-20"
+                        highlightedNote === "D" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "D" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       }`}
                     >
                       <p>D</p>
                     </button>
                     <button
                       className={`${
-                        highlightedNote === "E7" ? "button-22" : "button-20"
+                        highlightedNote === "E" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "E" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       }`}
                     >
                       <p>E</p>
                     </button>
                     <button
-                      className={`${
-                        highlightedNote === "F7" ? "button-22" : "button-20"
-                      }`}
-                    >
-                      <p>F</p>
-                    </button>
+                    className={`${
+                      highlightedNote === "F" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "F" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
+                    }`}
+                  >
+                    <p>F</p>
+                  </button>
                     <button
                       className={`${
-                        highlightedNote === "G7" ? "button-22" : "button-20"
+                        highlightedNote === "G" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "G" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       }`}
                     >
                       <p>G</p>
                     </button>
                     <button
                       className={`${
-                        highlightedNote === "A7" ? "button-22" : "button-20"
+                        highlightedNote === "A" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "A" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       }`}
                     >
                       <p>A</p>
                     </button>
                     <button
                       className={`${
-                        highlightedNote === "B7" ? "button-22" : "button-20"
+                        highlightedNote === "B" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "B" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       }`}
                     >
                       <p>B</p>
@@ -305,35 +344,55 @@ const Notes = () => {
                   <div className="accidentals-container">
                     <button
                       className={`${
-                        highlightedNote === "C#7" ? "button-21" : "button-20"
+                        highlightedNote === "C#" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "C#" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       } C`}
                     >
                       C#
                     </button>
                     <button
                       className={`${
-                        highlightedNote === "D#7" ? "button-22" : "button-20"
+                        highlightedNote === "D#" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "D#" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       } D`}
                     >
                       D#
                     </button>
                     <button
                       className={`${
-                        highlightedNote === "F#7" ? "button-22" : "button-20"
+                        highlightedNote === "F#" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "F#" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       } F`}
                     >
                       F#
                     </button>
                     <button
                       className={`${
-                        highlightedNote === "G#7" ? "button-22" : "button-20"
+                        highlightedNote === "G#" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "G#" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       } G`}
                     >
                       G#
                     </button>
                     <button
                       className={`${
-                        highlightedNote === "A#7" ? "button-22" : "button-20"
+                        highlightedNote === "A#" && highlightedNote === slicedNoteToGuess
+                        ? "button-21"
+                        : highlightedNote === "A#" && highlightedNote !== slicedNoteToGuess
+                        ? "button-22"
+                        : "button-20"
                       } A`}
                     >
                       A#
@@ -354,7 +413,7 @@ const Notes = () => {
           </div>
 
       {/* Confetti */}
-      {correctNotesCount === noteQueue.length && 
+      {progress === 100 && 
        <div className="flex w-full justify-center p-6 bg-green-200">
   <div className="flex items-center justify-between w-full mt-4 px-4 bg-green-200">
             <div>

@@ -54,7 +54,7 @@ const Notes = () => {
       T: Ba Ba Black Sheep
       M: 4/4
       K: C
-      =: G4 G4 D4 D4 | E4 E4 D4 | C4 C4 B4 B4 | A4 A4 G4 |
+      =: "G4"G4 "G4"G4 "D4"D4 "D4"D4 | "E4"E4 "E4"E4 "D4"D4 | "C4"C4 "C4"C4 "B4"B4 "B4"B4 | "A4"A4 "A4"A4 "G4"G4 |
     `,
     "Lullaby Baby": `
       X: 4
