@@ -9,7 +9,7 @@ import { hzToNoteString } from '../utils/NoteDetector';
 import Confetti from '../components/Confetti';
 import abcjs from 'abcjs';
 
-const Notes = () => {
+const Assessment = () => {
   const user = useSelector((state) => state.user);
   const location = useLocation();
   const [songTab, setSongTab] = useState("");
@@ -344,9 +344,9 @@ const Notes = () => {
                 src={loggedInUser.photo}
                 alt="Bordered avatar"
               />
-              <a href={`/app/assessment?title=${songName}`} className="button-small">
-              Evaluate
-              </a>
+              <button onClick={handleBackClick} className="button-small">
+                Done
+              </button>
             </div>
             <div className="w-full bg-gray-200 rounded-full dark:bg-gray-700">
               <div
@@ -366,156 +366,10 @@ const Notes = () => {
         <div className="bg-white p-2 w-full max-w-3xl">
           <h2 className="text-xl font-semibold mb-4">Let's Practice! </h2>
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-            <div className="flex flex-col items-center">
-              <p className="text-lg text-gray-500 mt-4 mb-5">
-               Great choice of music lets start practicing {songName} by playing the Note: 
-                <a className="text-bold text-5xl text-orange-500">
-                  {noteToGuess}
-                </a>{" "}
+          <p className="text-lg text-gray-500 mt-4 mb-20">
+          Welcome to the assessment! Let's put your learning to the test by playing <a className="text-bold text-5xl text-orange-500">{songName}</a> from memory.
+
               </p>
-              <div className="mb-5">
-              <div id="abcjs-container" className="flex w-full justify-center p-6 mb-10"></div>
-              <div className="keyboard-container">
-                  <div className="naturals-container">
-                    <button
-                      className={`button-20 ${
-                        highlightedNote === "C" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "C" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>C</p>
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "D" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "D" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>D</p>
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "E" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "E" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>E</p>
-                    </button>
-                    <button
-                    className={`${
-                      highlightedNote === "F" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "F" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                    }`}
-                  >
-                    <p>F</p>
-                  </button>
-                    <button
-                      className={`${
-                        highlightedNote === "G" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "G" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>G</p>
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "A" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "A" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>A</p>
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "B" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "B" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>B</p>
-                    </button>
-                  </div>
-                  <div className="accidentals-container">
-                    <button
-                      className={`${
-                        highlightedNote === "C#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "C#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } C`}
-                    >
-                      C#
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "D#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "D#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } D`}
-                    >
-                      D#
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "F#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "F#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } F`}
-                    >
-                      F#
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "G#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "G#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } G`}
-                    >
-                      G#
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "A#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "A#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } A`}
-                    >
-                      A#
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              
               <div className="space-y-4 md:space-y-6">
               <a onClick={startAudioContext} className="button-start">
                 START PRACTICING!
@@ -524,7 +378,7 @@ const Notes = () => {
             </div>
               </div>
             </div>
-          </div>
+          
 
       {/* Confetti */}
       {progress >= 100 && 
@@ -553,4 +407,4 @@ const Notes = () => {
   );
 };
 
-export default Notes;
+export default Assessment;
