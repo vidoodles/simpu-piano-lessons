@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate  } from "react-router-dom";
 import { Howl } from "howler";
 import { Modal, Button } from 'flowbite-react';
 import firebase from '../utils/FirebaseConfig';
@@ -41,6 +41,10 @@ const Notes = () => {
   function getRandomOctave() {
     return Math.floor(Math.random() * (7 - 3 + 1)) + 3; // Generates a random integer between 3 and 7 (inclusive)
   }
+
+  const handleBackClick = () => {
+    navigate(-1);
+  };
   
   const songs = {
     "London Bridge": `
@@ -276,7 +280,7 @@ const Notes = () => {
               const filteredArray = noteQueue.filter(str => str !== "");
               const pr_igress = Math.round((newCount / filteredArray.length) * 100)
               setProgress(pr_igress);
-              if(pr_igress == 100){
+              if(pr_igress >= 100){
                 setShowModal(true)
               }else{
                 setCurrentPosition(prevPosition => {
@@ -340,7 +344,7 @@ const Notes = () => {
                 src={loggedInUser.photo}
                 alt="Bordered avatar"
               />
-              <button onClick={() => handleNoteDone(noteToLetter)} className="button-small">
+              <button onClick={handleBackClick} className="button-small">
                 Done
               </button>
             </div>
@@ -523,7 +527,7 @@ const Notes = () => {
           </div>
 
       {/* Confetti */}
-      {progress === 100 && 
+      {progress >= 100 && 
        <div className="flex w-full justify-center p-6 bg-green-200">
   <div className="flex items-center justify-between w-full mt-4 px-4 bg-green-200">
             <div>
@@ -538,9 +542,9 @@ const Notes = () => {
                 { wrongNotesCount } 
               </span>
             </div>
-            <button onClick={handleNoteDone(noteToLetter)} className="button-19">
+            <a onClick={handleBackClick} className="button-19">
               CONTINUE
-            </button>
+            </a>
       <Confetti />
       </div>
       </div>

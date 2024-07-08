@@ -167,7 +167,7 @@ const Notes = () => {
               const filteredArray = noteQueue.filter(str => str !== "");
               const pr_igress = Math.round((newCount / filteredArray.length) * 100)
               setProgress(pr_igress);
-              if(pr_igress == 100){
+              if(pr_igress >= 100){
                 // call the stop here
               }else{
                 setCurrentPosition(prevPosition => {
@@ -387,14 +387,7 @@ const Notes = () => {
                       G#
                     </button>
                     <button
-                      className={`${
-                        highlightedNote === "A#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "A#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } A`}
-                    >
+                      className="button-20">
                       A#
                     </button>
                   </div>
@@ -413,7 +406,7 @@ const Notes = () => {
           </div>
 
       {/* Confetti */}
-      {progress === 100 && 
+      {progress >= 100 && 
        <div className="flex w-full justify-center p-6 bg-green-200">
   <div className="flex items-center justify-between w-full mt-4 px-4 bg-green-200">
             <div>
