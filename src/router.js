@@ -20,6 +20,7 @@ import ProficientSteps from "./pages/ProficientSteps";
 import Songs from "./pages/Songs";
 import Master from "./pages/Master";
 import MasterSteps from "./pages/MasterSteps";
+import Assessment from "./pages/AssessmentSongs";
 
 const router = createBrowserRouter([
   {
@@ -79,6 +80,11 @@ const router = createBrowserRouter([
       {
         path: "songpractice",
         element: <Songs />,
+        loader: gsapLoader,
+      },
+      {
+        path: "assessment",
+        element: <Assessment />,
         loader: gsapLoader,
       },
       {

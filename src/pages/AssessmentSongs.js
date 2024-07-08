@@ -1,19 +1,26 @@
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate  } from "react-router-dom";
 import { Howl } from "howler";
+import { Modal, Button } from 'flowbite-react';
 import firebase from '../utils/FirebaseConfig';
 import NoteDetector from "../utils/DetectorClass";
 import { hzToNoteString } from '../utils/NoteDetector';
 import Confetti from '../components/Confetti';
+import abcjs from 'abcjs';
 
-const Notes = () => {
+const Assessment = () => {
   const user = useSelector((state) => state.user);
   const location = useLocation();
+  const [songTab, setSongTab] = useState("");
+  const [songName, setSongName] = useState("");
+  const [showModal, setShowModal] = useState(false);
+
   const storedUser = localStorage.getItem("user");
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [highlightedNote, setHighlightedNote] = useState(null);
   const [correctNotesCount, setCorrectNotesCount] = useState(0);
+  const [wrongNotesCount, setWrongNotesCount] = useState(0);
   const [noteToGuess, setNoteToGuess] = useState(null);
   const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
@@ -21,6 +28,7 @@ const Notes = () => {
   const [detectionEnabled, setDetectionEnabled] = useState(true);
   const searchParams = new URLSearchParams(location.search);
   const noteLetter = searchParams.get('note');
+  const [slicedNoteToGuess, setSlicedNoteToGuess] = useState(true);
 
   const [noteQueue, setNoteQueue] = useState([]);
 
@@ -34,6 +42,73 @@ const Notes = () => {
     return Math.floor(Math.random() * (7 - 3 + 1)) + 3; // Generates a random integer between 3 and 7 (inclusive)
   }
 
+  const handleBackClick = () => {
+    navigate(-1);
+  };
+  
+  const songs = {
+    "London Bridge": `
+      T: London Bridge
+      M: 4/4
+      =: "G4"G4 "A4"A4 "G4"G4 "F4"F4 | "E4"E4 "F4"F4 "G4"G4 | "D4"D4 "E4"E4 "F4"F4 | "E4"E4 "F4"F4 "G4"G4 |
+      "G4"G4 "A4"A4 "G4"G4 "F4"F4 | "E4"E4 "F4"F4 "G4"G4 | "D4"D4 "G4"G4  | "E4"E4 "C4"C4 |
+    `,
+    "Ba Ba Black Sheep": `
+      X: 3
+      T: Ba Ba Black Sheep
+      M: 4/4
+      K: C
+      =: "G4"G4 "G4"G4 "D4"D4 "D4"D4 | "E4"E4 "E4"E4 "D4"D4 | "C4"C4 "C4"C4 "B4"B4 "B4"B4 | "A4"A4 "A4"A4 "G4"G4 |
+    `,
+    "Lullaby Baby": `
+      X: 4
+      T: Lullaby Baby
+      M: 4/4
+      K: C
+     =:  G4 A4 G4 F4 | E4 D4 C4 | C4 D4 E4 F4 | G4 A4 B4 |
+    `,
+    "Ode to Joy": `
+    X: 1
+    T: Ode to Joy
+    M: 4/4
+    K: C
+    L: 1/4
+    =: E E F G | G F E D | C C D E | E D D | E E F G | G F E D | C C D E | D C C
+    `,
+    "Moonlight Sonata": `
+    X: 2
+    T: Moonlight Sonata
+    M: 4/4
+    K: C#m
+    L: 1/4
+    V:1 treble
+    L: 1/8
+    =: "Em" z4 z4 | "Em" B3 E G B3 | "Em" d3 B G E3 | "Em" d3 B G E3 | "Em" B3 E G B3 | "Em" d3 B G E3 | "Em" d3 B G E3 |
+    `,
+    "Canon in D": `
+    X: 3
+    T: Canon in D
+    M: 4/4
+    K: D
+    L: 1/4
+    P: A
+    =: D E F# G | A F# D A | D E F# G | A F# D A |
+    B A G F# | E D E F# | G F# E D | C# D E F# |
+    G A B C# | D C# B A | G A B C# | D C# B A |
+    B A G F# | E D E F# | G F# E D | C# D E F# |`,
+    "River Flows in You": `
+    X: 4
+    T: River Flows in You
+    M: 4/4
+    K: Am
+    L: 1/8
+    P: A
+    =:  "Am" e2 e2 e2 g2 | "C" c2 c2 c2 c2 | "G" B2 B2 B2 B2 | "Am" e2 e2 e2 e2 |
+    "F" a2 a2 a2 a2 | "G" b2 b2 b2 b2 | "C" c'2 c'2 c'2 c'2 | "Am" a2 a2 a2 a2 |
+    "F" e2 e2 e2 e2 | "G" d2 d2 d2 d2 | "Am" e2 e2 e2 e2 | "F" g2 g2 g2 g2 |
+    `
+  };
+
   
   const [currentPosition, setCurrentPosition] = useState(0);
   const analyser = useRef(null);
@@ -44,22 +119,63 @@ const Notes = () => {
   const lastVol = useRef(0);
   const noteToGuessRef = useRef(null); // useRef for noteToGuess
   const [noteToLetter, setNoteToletter] = useState("");
-  const [slicedNoteToGuess, setSlicedNoteToGuess] = useState(true);
+
+  function parseTab(song) {
+    const notesPattern = /=:\s*([^`]+)/;
+    const match = song.match(notesPattern);
+    if (match) {
+      let notes = match[1].trim();
+      
+      // Replace notes inside double quotes with empty strings
+      notes = notes.replace(/"[^"]*"/g, '');
+  
+      // Remove extra spaces and split by '|' to preserve bars
+      let notesArray = notes.replace(/\s+/g, ' ').split('|');
+  
+      // Trim each segment and split by whitespace
+      notesArray = notesArray.map(segment => segment.trim().split(/\s+/));
+  
+      // Flatten the array
+      notesArray = notesArray.flat().filter(note => note !== '');
+      let spacedNotesArray = [];
+      for (let i = 0; i < notesArray.length; i++) {
+        spacedNotesArray.push(notesArray[i]);
+        if (i < notesArray.length - 1) {
+          spacedNotesArray.push('');
+        }
+      }
+      return spacedNotesArray;
+    }
+    return null;
+  }
+
 
 
   useEffect(() => {
-    if (noteLetter) {
-      const notes = [];
-      for (let i = 0; i < 7; i++) {
-        if (i === 0 || i % 2 === 0) { // Add index 0 and skip odd indices
-          notes.push(getRandomNoteWithOctave(noteLetter));
-        } else {
-          notes.push(""); // Push an empty string for odd indices you want to skip
-        }
-      }
-      setNoteQueue(notes);
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      setLoggedInUser(userData);
     }
-  }, [noteLetter]);
+  }, []);
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const title = query.get('title');
+    if (title && songs[title]) {
+      setSongName(title);
+      setSongTab(songs[title]);
+      const tabs = parseTab(songs[title])
+      setNoteQueue(tabs);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (songTab) {
+      abcjs.renderAbc("abcjs-container", songTab);
+    }
+  }, [songTab]);
+
 
   function getRandomNoteWithOctave(noteLetter) {
     const octave = getRandomOctave();
@@ -145,10 +261,7 @@ const Notes = () => {
       const note = detector.current.getNote();
       const desc = note && note.stable ? hzToNoteString(note.freq) : "";
       const currentNote = desc.replace(".", "");
-      
       setHighlightedNote(currentNote.slice(0, -1)); 
-
-      console.log(`Detected note: ${currentNote}, Note to guess: ${noteToGuessRef.current}`);
       if (currentPosition < noteQueue.length) {
         const expectedNote = noteQueue[currentPosition];
         if (
@@ -168,7 +281,7 @@ const Notes = () => {
               const pr_igress = Math.round((newCount / filteredArray.length) * 100)
               setProgress(pr_igress);
               if(pr_igress >= 100){
-                // call the stop here
+                setShowModal(true)
               }else{
                 setCurrentPosition(prevPosition => {
                   const nextPosition = prevPosition + 1;
@@ -182,7 +295,11 @@ const Notes = () => {
               return newCount;
             });
           }else{
-  
+            setWrongNotesCount((prevCount) => {
+              setSlicedNoteToGuess(noteToGuessRef.current.slice(0, -1))
+              const newCount = prevCount + 1;
+              return newCount;
+            });
           }
         }
       }
@@ -195,12 +312,9 @@ const Notes = () => {
   };
 
   const handleNoteDone = async (note) => {
-    const userRef = firebase.firestore().collection('users').doc(loggedInUser.user);
-    await userRef.update({
-      [`tutorial.${    noteLetter
-        .toString().toLowerCase()}`]: "done"
-    });
-    navigate('/app/novice/steps')
+   // const userRef = firebase.firestore().collection('users').doc(loggedInUser.user);
+
+    //navigate('/app/novice/steps')
     
   };
 
@@ -230,7 +344,7 @@ const Notes = () => {
                 src={loggedInUser.photo}
                 alt="Bordered avatar"
               />
-              <button onClick={() => handleNoteDone(noteToLetter)} className="button-small">
+              <button onClick={handleBackClick} className="button-small">
                 Done
               </button>
             </div>
@@ -252,149 +366,10 @@ const Notes = () => {
         <div className="bg-white p-2 w-full max-w-3xl">
           <h2 className="text-xl font-semibold mb-4">Let's Practice! </h2>
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-            <div className="flex flex-col items-center">
-              <p className="text-lg text-gray-500 mt-4 mb-5">
-                Click the button below and try to play the{" "}
-                <a className="text-bold text-5xl text-orange-500">
-                  {noteToGuess}
-                </a>{" "}
-                Note on your piano
+          <p className="text-lg text-gray-500 mt-4 mb-20">
+          Welcome to the assessment! Let's put your learning to the test by playing <a className="text-bold text-5xl text-orange-500">{songName}</a> from memory.
+
               </p>
-              <div className="mb-5">
-              <div className="keyboard-container">
-                  <div className="naturals-container">
-                    <button
-                      className={`button-20 ${
-                        highlightedNote === "C" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "C" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>C</p>
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "D" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "D" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>D</p>
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "E" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "E" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>E</p>
-                    </button>
-                    <button
-                    className={`${
-                      highlightedNote === "F" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "F" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                    }`}
-                  >
-                    <p>F</p>
-                  </button>
-                    <button
-                      className={`${
-                        highlightedNote === "G" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "G" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>G</p>
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "A" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "A" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>A</p>
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "B" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "B" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      }`}
-                    >
-                      <p>B</p>
-                    </button>
-                  </div>
-                  <div className="accidentals-container">
-                    <button
-                      className={`${
-                        highlightedNote === "C#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "C#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } C`}
-                    >
-                      C#
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "D#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "D#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } D`}
-                    >
-                      D#
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "F#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "F#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } F`}
-                    >
-                      F#
-                    </button>
-                    <button
-                      className={`${
-                        highlightedNote === "G#" && highlightedNote === slicedNoteToGuess
-                        ? "button-21"
-                        : highlightedNote === "G#" && highlightedNote !== slicedNoteToGuess
-                        ? "button-22"
-                        : "button-20"
-                      } G`}
-                    >
-                      G#
-                    </button>
-                    <button
-                      className="button-20">
-                      A#
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              
               <div className="space-y-4 md:space-y-6">
               <a onClick={startAudioContext} className="button-start">
                 START PRACTICING!
@@ -403,7 +378,7 @@ const Notes = () => {
             </div>
               </div>
             </div>
-          </div>
+          
 
       {/* Confetti */}
       {progress >= 100 && 
@@ -417,12 +392,13 @@ const Notes = () => {
                 />
               </div>
               <span className="text-lg ml-3 text-green-800 font-bold">
-                Correct
+                Completed
+                { wrongNotesCount } 
               </span>
             </div>
-            <button onClick={handleNoteDone(noteToLetter)} className="button-19">
+            <a onClick={handleBackClick} className="button-19">
               CONTINUE
-            </button>
+            </a>
       <Confetti />
       </div>
       </div>
@@ -431,4 +407,4 @@ const Notes = () => {
   );
 };
 
-export default Notes;
+export default Assessment;
